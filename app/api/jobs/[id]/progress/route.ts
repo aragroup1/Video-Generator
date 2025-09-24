@@ -4,10 +4,11 @@ import { requireAuth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth();
+    const { id } = await params;
 
     // Set up SSE
     const encoder = new TextEncoder();
@@ -22,7 +23,7 @@ export async function GET(
         // Send initial status
         const job = await prisma.videoJob.findFirst({
           where: {
-            id: params.id,
+            id: id,
             project: {
               userId: user.id,
             },
@@ -44,7 +45,7 @@ export async function GET(
         // Poll for updates
         const interval = setInterval(async () => {
           const updatedJob = await prisma.videoJob.findUnique({
-            where: { id: params.id },
+            where: { id: id },
           });
 
           if (!updatedJob) {
