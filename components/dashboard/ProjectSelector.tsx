@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { setCookie, getCookie } from 'cookies-next';
 
 interface Project {
   id: string;
@@ -23,12 +22,13 @@ interface ProjectSelectorProps {
 
 export default function ProjectSelector({ projects }: ProjectSelectorProps) {
   const router = useRouter();
-  const currentProjectId = getCookie('current-project') || projects[0]?.id;
-  const [selectedProject, setSelectedProject] = useState(currentProjectId);
+  const [selectedProject, setSelectedProject] = useState(projects[0]?.id || '');
 
   const handleProjectChange = (projectId: string) => {
     setSelectedProject(projectId);
-    setCookie('current-project', projectId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('current-project', projectId);
+    }
     router.refresh();
   };
 
@@ -37,6 +37,7 @@ export default function ProjectSelector({ projects }: ProjectSelectorProps) {
       <Select
         value={selectedProject}
         onChange={(e) => handleProjectChange(e.target.value)}
+        className="min-w-[200px]"
       >
         {projects.map((project) => (
           <option key={project.id} value={project.id}>
