@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String    @map("password_hash")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  
+  projects     Project[]
+  
+  @@map("users")
+}
+
+model Project {
+  id              String    @id @default(cuid())
+  name            String
+  description     String?
+  shopifyUrl      String?   @map("shopify_url")
+  shopifyToken    String?   @map("shopify_token")
+  runwayKey       String?   @map("runway_key")
+  lumaKey         String?   @map("luma_key")
+  pikaKey         String?   @map("pika_key")
+  tiktokKey       String?   @map("tiktok_key")
+  tiktokSecret    String?   @map("tiktok_secret")
+  userId          String    @map("user_id")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products        Product[]
+  videoJobs       VideoJob[]
+  videos          Video[]
+  
+  @@index([userId])
+  @@map("projects")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  projectId   String   @map("project_id")
+  shopifyId   String   @map("shopify_id")
+  title       String
+  description String?
+  images      Json     @default("[]")
+  category    String?
+  tags        String[]
+  price       Decimal? @db.Decimal(10, 2)
+  currency    String   @default("USD")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  videoJobs   VideoJob[]
+  videos      Video[]
+  
+  @@unique([projectId, shopifyId])
+  @@index([projectId])
+  @@map("products")
+}
+
+model VideoJob {
+  id           String      @id @default(cuid())
+  projectId    String      @map("project_id")
+  productId    String      @map("product_id")
+  jobType      VideoType   @map("job_type")
+  provider     AIProvider
+  status       JobStatus   @default(PENDING)
+  settings     Json        @default("{}")
+  prompt       String?
+  resultUrl    String?     @map("result_url")
+  errorMessage String?     @map("error_message")
+  costCredits  Int?        @map("cost_credits")
+  progress     Int         @default(0)
+  startedAt    DateTime?   @map("started_at")
+  completedAt  DateTime?   @map("completed_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  video        Video?
+  
+  @@index([projectId, status])
+  @@index([productId])
+  @@map("video_jobs")
+}
+
+model Video {
+  id            String     @id @default(cuid())
+  projectId     String     @map("project_id")
+  productId     String     @map("product_id")
+  jobId         String?    @unique @map("job_id")
+  videoType     VideoType  @map("video_type")
+  fileUrl       String     @map("file_url")
+  thumbnailUrl  String?    @map("thumbnail_url")
+  duration      Int?
+  fileSize      BigInt?    @map("file_size")
+  metadata      Json       @default("{}")
+  isPublished   Boolean    @default(false) @map("is_published")
+  tiktokPostId  String?    @map("tiktok_post_id")
+  views         Int        @default(0)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  product       Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  job           VideoJob?  @relation(fields: [jobId], references: [id])
+  
+  @@index([projectId])
+  @@index([productId])
+  @@map("videos")
+}
+
+enum VideoType {
+  PRODUCT_DEMO
+  LIFESTYLE
+  TESTIMONIAL
+  ROTATION_360
+}
+
+enum AIProvider {
+  RUNWAY
+  LUMA
+  PIKA
+  REPLICATE
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  RETRYING
+}
