@@ -86,7 +86,7 @@ export default async function DashboardPage() {
               <div className="text-sm text-gray-600">Import products from Shopify</div>
             </a>
             <a
-              href="/dashboard/videos/generate"
+              href="/dashboard/videos"
               className="block p-4 border rounded-lg hover:bg-gray-50 transition"
             >
               <div className="font-medium">Generate Videos</div>
