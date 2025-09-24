@@ -1,23 +1,33 @@
 import { Suspense } from 'react';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { getCookie } from 'cookies-next';
-import { cookies } from 'next/headers';
 import ProductList from '@/components/products/ProductList';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 
+async function getDefaultProject(userId: string) {
+  const project = await prisma.project.findFirst({
+    where: { userId },
+    orderBy: { createdAt: 'asc' },
+  });
+  return project;
+}
+
 export default async function ProductsPage() {
   const user = await requireAuth();
-  const cookieStore = cookies();
-  const currentProjectId = cookieStore.get('current-project')?.value;
+  
+  // Get the first project for now
+  const defaultProject = await getDefaultProject(user.id);
 
-  if (!currentProjectId) {
+  if (!defaultProject) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">Please select or create a project first.</p>
-        <Button className="mt-4" onClick={() => window.location.href = '/dashboard/projects'}>
-          Go to Projects
+        <p className="text-gray-600">Please create a project first.</p>
+        <Button 
+          className="mt-4"
+          onClick={() => window.location.href = '/dashboard/projects'}
+        >
+          Create Project
         </Button>
       </div>
     );
@@ -25,7 +35,7 @@ export default async function ProductsPage() {
 
   const products = await prisma.product.findMany({
     where: {
-      projectId: currentProjectId,
+      projectId: defaultProject.id,
     },
     include: {
       _count: {
@@ -51,7 +61,7 @@ export default async function ProductsPage() {
       </div>
 
       <Suspense fallback={<div>Loading products...</div>}>
-        <ProductList products={products} projectId={currentProjectId} />
+        <ProductList products={products} projectId={defaultProject.id} />
       </Suspense>
     </div>
   );
