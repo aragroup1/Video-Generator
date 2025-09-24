@@ -16,7 +16,6 @@ async function getDefaultProject(userId: string) {
 export default async function ProductsPage() {
   const user = await requireAuth();
   
-  // Get the first project for now
   const defaultProject = await getDefaultProject(user.id);
 
   if (!defaultProject) {
@@ -25,7 +24,6 @@ export default async function ProductsPage() {
         <p className="text-gray-600">Please create a project first.</p>
         <Button 
           className="mt-4"
-          onClick={() => window.location.href = '/dashboard/projects'}
         >
           Create Project
         </Button>
