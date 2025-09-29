@@ -1,51 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import prisma from '@/lib/prisma';
-import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
-
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
+import { createToken, setAuthCookie, initializeSingleUser } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = loginSchema.parse(body);
+    const { password } = body;
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
+    // Initialize single user if needed
+    await initializeSingleUser();
 
-    if (!user) {
+    // Simple password check
+    const correctPassword = process.env.ADMIN_PASSWORD || 'changeme';
+    
+    if (password !== correctPassword) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      );
-    }
-
-    const isValid = await verifyPassword(password, user.passwordHash);
-
-    if (!isValid) {
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Invalid password' },
         { status: 401 }
       );
     }
 
     const token = await createToken({
-      id: user.id,
-      email: user.email,
-      name: user.name,
+      id: 'single-user',
+      email: 'admin@localhost',
+      name: 'Admin',
     });
 
     await setAuthCookie(token);
 
     return NextResponse.json({
+      success: true,
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
+        id: 'single-user',
+        email: 'admin@localhost',
+        name: 'Admin',
       },
     });
   } catch (error: any) {
