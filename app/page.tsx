@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,23 +10,28 @@ import toast from 'react-hot-toast';
 export default function LoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    name: '',
-  });
+  const [password, setPassword] = useState('');
+
+  useEffect(() => {
+    // Check if already logged in
+    fetch('/api/auth/check')
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated) {
+          router.push('/dashboard');
+        }
+      });
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const endpoint = isSignUp ? '/api/auth/signup' : '/api/auth/login';
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ password }),
       });
 
       const data = await response.json();
@@ -35,7 +40,7 @@ export default function LoginPage() {
         throw new Error(data.error || 'Authentication failed');
       }
 
-      toast.success(isSignUp ? 'Account created successfully' : 'Logged in successfully');
+      toast.success('Logged in successfully');
       router.push('/dashboard');
     } catch (error: any) {
       toast.error(error.message);
@@ -49,52 +54,25 @@ export default function LoginPage() {
       <Card className="w-full max-w-md p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">AI Video Dashboard</h1>
-          <p className="text-gray-600 mt-2">
-            {isSignUp ? 'Create your account' : 'Sign in to your account'}
-          </p>
+          <p className="text-gray-600 mt-2">Enter password to access</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {isSignUp && (
-            <Input
-              type="text"
-              placeholder="Name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
-          )}
-          
-          <Input
-            type="email"
-            placeholder="Email"
-            required
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          />
-          
           <Input
             type="password"
             placeholder="Password"
             required
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
 
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
+            {isLoading ? 'Loading...' : 'Access Dashboard'}
           </Button>
         </form>
 
-        <div className="mt-6 text-center">
-          <button
-            type="button"
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-sm text-blue-600 hover:text-blue-700"
-          >
-            {isSignUp
-              ? 'Already have an account? Sign in'
-              : "Don't have an account? Sign up"}
-          </button>
+        <div className="mt-4 text-center text-sm text-gray-500">
+          Default password: Set ADMIN_PASSWORD in environment
         </div>
       </Card>
     </div>
