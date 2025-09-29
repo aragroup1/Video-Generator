@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
 
 const updateProjectSchema = z.object({
   name: z.string().optional(),
@@ -21,14 +20,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
     const { id } = await params;
 
-    const project = await prisma.project.findFirst({
-      where: {
-        id: id,
-        userId: user.id,
-      },
+    const project = await prisma.project.findUnique({
+      where: { id },
       include: {
         _count: {
           select: {
@@ -51,7 +46,7 @@ export async function GET(
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Failed to fetch project' },
-      { status: 401 }
+      { status: 500 }
     );
   }
 }
@@ -61,27 +56,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
     const { id } = await params;
     const body = await request.json();
     const data = updateProjectSchema.parse(body);
 
-    const project = await prisma.project.findFirst({
-      where: {
-        id: id,
-        userId: user.id,
-      },
-    });
-
-    if (!project) {
-      return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
-      );
-    }
-
     const updated = await prisma.project.update({
-      where: { id: id },
+      where: { id },
       data,
     });
 
@@ -99,25 +79,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
     const { id } = await params;
 
-    const project = await prisma.project.findFirst({
-      where: {
-        id: id,
-        userId: user.id,
-      },
-    });
-
-    if (!project) {
-      return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
-      );
-    }
-
     await prisma.project.delete({
-      where: { id: id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });
