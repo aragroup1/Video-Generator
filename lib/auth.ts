@@ -13,6 +13,13 @@ export interface UserPayload {
   name: string | null;
 }
 
+// Hardcoded single user
+const SINGLE_USER = {
+  id: 'single-user',
+  email: 'admin@localhost',
+  name: 'Admin',
+};
+
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
 }
@@ -25,7 +32,7 @@ export async function createToken(payload: UserPayload): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('7d')
+    .setExpirationTime('30d')
     .sign(secret);
 }
 
@@ -39,20 +46,13 @@ export async function verifyToken(token: string): Promise<UserPayload | null> {
 }
 
 export async function getUser(): Promise<UserPayload | null> {
-  const cookieStore = cookies();
-  const token = cookieStore.get('auth-token')?.value;
-  
-  if (!token) return null;
-  
-  return verifyToken(token);
+  // For single user, always return the same user
+  return SINGLE_USER;
 }
 
 export async function requireAuth(): Promise<UserPayload> {
-  const user = await getUser();
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
-  return user;
+  // For single user, always return the same user
+  return SINGLE_USER;
 }
 
 export async function setAuthCookie(token: string): Promise<void> {
@@ -61,7 +61,7 @@ export async function setAuthCookie(token: string): Promise<void> {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * 30, // 30 days
     path: '/',
   });
 }
@@ -69,4 +69,31 @@ export async function setAuthCookie(token: string): Promise<void> {
 export async function clearAuthCookie(): Promise<void> {
   const cookieStore = cookies();
   cookieStore.delete('auth-token');
+}
+
+// Initialize single user on first run
+export async function initializeSingleUser() {
+  const existingUser = await prisma.user.findFirst();
+  
+  if (!existingUser) {
+    const hashedPassword = await hashPassword(process.env.ADMIN_PASSWORD || 'changeme');
+    
+    const user = await prisma.user.create({
+      data: {
+        id: SINGLE_USER.id,
+        email: SINGLE_USER.email,
+        name: SINGLE_USER.name,
+        passwordHash: hashedPassword,
+      },
+    });
+
+    // Create default project
+    await prisma.project.create({
+      data: {
+        name: 'Main Project',
+        description: 'Default project',
+        userId: user.id,
+      },
+    });
+  }
 }
