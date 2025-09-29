@@ -1,16 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await requireAuth();
     const { id } = await params;
 
-    // Set up SSE
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
@@ -20,14 +17,8 @@ export async function GET(
           );
         };
 
-        // Send initial status
-        const job = await prisma.videoJob.findFirst({
-          where: {
-            id: id,
-            project: {
-              userId: user.id,
-            },
-          },
+        const job = await prisma.videoJob.findUnique({
+          where: { id },
         });
 
         if (!job) {
@@ -42,10 +33,9 @@ export async function GET(
           errorMessage: job.errorMessage,
         });
 
-        // Poll for updates
         const interval = setInterval(async () => {
           const updatedJob = await prisma.videoJob.findUnique({
-            where: { id: id },
+            where: { id },
           });
 
           if (!updatedJob) {
@@ -70,7 +60,6 @@ export async function GET(
           }
         }, 2000);
 
-        // Clean up on disconnect
         request.signal.addEventListener('abort', () => {
           clearInterval(interval);
           controller.close();
@@ -88,7 +77,7 @@ export async function GET(
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Failed to get progress' },
-      { status: 401 }
+      { status: 500 }
     );
   }
 }
