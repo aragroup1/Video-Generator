@@ -1,83 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-export async function GET(
+export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAuth();
     const { id } = await params;
 
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        const sendEvent = (data: any) => {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-          );
-        };
+    const job = await prisma.videoJob.findUnique({
+      where: { id },
+    });
 
-        const job = await prisma.videoJob.findUnique({
-          where: { id },
-        });
+    if (!job) {
+      return NextResponse.json(
+        { error: 'Job not found' },
+        { status: 404 }
+      );
+    }
 
-        if (!job) {
-          sendEvent({ error: 'Job not found' });
-          controller.close();
-          return;
-        }
+    if (job.status !== 'FAILED') {
+      return NextResponse.json(
+        { error: 'Only failed jobs can be retried' },
+        { status: 400 }
+      );
+    }
 
-        sendEvent({
-          status: job.status,
-          progress: job.progress,
-          errorMessage: job.errorMessage,
-        });
-
-        const interval = setInterval(async () => {
-          const updatedJob = await prisma.videoJob.findUnique({
-            where: { id },
-          });
-
-          if (!updatedJob) {
-            clearInterval(interval);
-            controller.close();
-            return;
-          }
-
-          sendEvent({
-            status: updatedJob.status,
-            progress: updatedJob.progress,
-            resultUrl: updatedJob.resultUrl,
-            errorMessage: updatedJob.errorMessage,
-          });
-
-          if (
-            updatedJob.status === 'COMPLETED' ||
-            updatedJob.status === 'FAILED'
-          ) {
-            clearInterval(interval);
-            controller.close();
-          }
-        }, 2000);
-
-        request.signal.addEventListener('abort', () => {
-          clearInterval(interval);
-          controller.close();
-        });
+    // Update job status to retry
+    await prisma.videoJob.update({
+      where: { id },
+      data: {
+        status: 'PENDING',
+        errorMessage: null,
+        progress: 0,
       },
     });
 
-    return new NextResponse(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || 'Failed to get progress' },
-      { status: 500 }
+      { error: error.message || 'Failed to retry job' },
+      { status: 400 }
     );
   }
 }
