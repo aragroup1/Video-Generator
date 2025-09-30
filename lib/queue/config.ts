@@ -21,25 +21,38 @@ export const defaultJobOptions = {
   },
 };
 
-export const videoQueue = new Queue(VIDEO_QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions,
-});
+// Only create queues if Redis is configured
+const isRedisConfigured = () => !!process.env.REDIS_URL;
 
-export const shopifyQueue = new Queue(SHOPIFY_QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions,
-});
+export const videoQueue = isRedisConfigured() 
+  ? new Queue(VIDEO_QUEUE_NAME, {
+      connection: redis,
+      defaultJobOptions,
+    })
+  : null as any;
 
-export const tiktokQueue = new Queue(TIKTOK_QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions,
-});
+export const shopifyQueue = isRedisConfigured()
+  ? new Queue(SHOPIFY_QUEUE_NAME, {
+      connection: redis,
+      defaultJobOptions,
+    })
+  : null as any;
 
-export const videoQueueEvents = new QueueEvents(VIDEO_QUEUE_NAME, {
-  connection: redis,
-});
+export const tiktokQueue = isRedisConfigured()
+  ? new Queue(TIKTOK_QUEUE_NAME, {
+      connection: redis,
+      defaultJobOptions,
+    })
+  : null as any;
 
-export const shopifyQueueEvents = new QueueEvents(SHOPIFY_QUEUE_NAME, {
-  connection: redis,
-});
+export const videoQueueEvents = isRedisConfigured()
+  ? new QueueEvents(VIDEO_QUEUE_NAME, {
+      connection: redis,
+    })
+  : null as any;
+
+export const shopifyQueueEvents = isRedisConfigured()
+  ? new QueueEvents(SHOPIFY_QUEUE_NAME, {
+      connection: redis,
+    })
+  : null as any;
