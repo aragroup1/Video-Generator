@@ -6,7 +6,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatBytes(bytes: number | bigint, decimals = 2) {
+  // Convert BigInt to number for calculation
   const bytesNum = typeof bytes === 'bigint' ? Number(bytes) : bytes;
+  
   if (bytesNum === 0) return '0 Bytes';
 
   const k = 1024;
