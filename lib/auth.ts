@@ -29,7 +29,7 @@ export async function verifyPassword(password: string, hashedPassword: string): 
 }
 
 export async function createToken(payload: UserPayload): Promise<string> {
-  return new SignJWT(payload)
+  return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30d')
@@ -39,7 +39,11 @@ export async function createToken(payload: UserPayload): Promise<string> {
 export async function verifyToken(token: string): Promise<UserPayload | null> {
   try {
     const { payload } = await jwtVerify(token, secret);
-    return payload as UserPayload;
+    return {
+      id: payload.id as string,
+      email: payload.email as string,
+      name: payload.name as string | null,
+    };
   } catch {
     return null;
   }
@@ -73,27 +77,33 @@ export async function clearAuthCookie(): Promise<void> {
 
 // Initialize single user on first run
 export async function initializeSingleUser() {
-  const existingUser = await prisma.user.findFirst();
-  
-  if (!existingUser) {
-    const hashedPassword = await hashPassword(process.env.ADMIN_PASSWORD || 'changeme');
+  try {
+    const existingUser = await prisma.user.findFirst();
     
-    const user = await prisma.user.create({
-      data: {
-        id: SINGLE_USER.id,
-        email: SINGLE_USER.email,
-        name: SINGLE_USER.name,
-        passwordHash: hashedPassword,
-      },
-    });
+    if (!existingUser) {
+      const hashedPassword = await hashPassword(process.env.ADMIN_PASSWORD || 'changeme');
+      
+      const user = await prisma.user.create({
+        data: {
+          id: SINGLE_USER.id,
+          email: SINGLE_USER.email,
+          name: SINGLE_USER.name,
+          passwordHash: hashedPassword,
+        },
+      });
 
-    // Create default project
-    await prisma.project.create({
-      data: {
-        name: 'Main Project',
-        description: 'Default project',
-        userId: user.id,
-      },
-    });
+      // Create default project
+      await prisma.project.create({
+        data: {
+          name: 'Main Project',
+          description: 'Default project',
+          userId: user.id,
+        },
+      });
+
+      console.log('Single user initialized successfully');
+    }
+  } catch (error) {
+    console.error('Error initializing single user:', error);
   }
 }
