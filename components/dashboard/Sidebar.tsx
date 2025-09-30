@@ -14,6 +14,7 @@ import {
   Clock,
   Menu,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -35,16 +36,16 @@ export default function Sidebar() {
     <>
       {/* Mobile menu button */}
       <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-md bg-white shadow-lg"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2.5 rounded-xl bg-white shadow-luxury backdrop-blur-xl border border-slate-200"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
-        {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+        {mobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          className="lg:hidden fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -52,51 +53,92 @@ export default function Sidebar() {
       {/* Sidebar */}
       <div
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex flex-col bg-white border-r border-gray-200 transition-all duration-300',
-          collapsed ? 'w-16' : 'w-64',
+          'fixed inset-y-0 left-0 z-40 flex flex-col bg-white border-r border-slate-200/60 transition-all duration-300 shadow-luxury',
+          collapsed ? 'w-20' : 'w-72',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
-        <div className="flex h-16 items-center justify-between px-4 border-b">
+        {/* Header */}
+        <div className="flex h-20 items-center justify-between px-6 border-b border-slate-200/60">
           {!collapsed && (
-            <h2 className="text-xl font-bold text-gray-900">AI Videos</h2>
+            <div className="flex items-center gap-3">
+              <div className="gradient-brand p-2 rounded-xl">
+                <Video className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  AI Studio
+                </h2>
+                <p className="text-xs text-slate-500 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  Premium
+                </p>
+              </div>
+            </div>
+          )}
+          {collapsed && (
+            <div className="gradient-brand p-2 rounded-xl mx-auto">
+              <Video className="w-5 h-5 text-white" />
+            </div>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:block p-1 rounded-md hover:bg-gray-100"
+            className="hidden lg:flex p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
           >
-            {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 px-2 py-4">
+        {/* Navigation */}
+        <nav className="flex-1 space-y-1 px-3 py-6 overflow-y-auto">
           {navigation.map((item) => {
-            const isActive = pathname.startsWith(item.href);
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors',
+                  'flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200',
+                  collapsed ? 'justify-center' : 'gap-3',
                   isActive
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'gradient-brand text-white shadow-lg shadow-purple-500/30'
+                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                 )}
                 onClick={() => setMobileOpen(false)}
               >
                 <item.icon
                   className={cn(
                     'flex-shrink-0',
-                    collapsed ? 'mx-auto' : 'mr-3',
-                    isActive ? 'text-blue-700' : 'text-gray-400'
+                    isActive ? 'text-white' : 'text-slate-500'
                   )}
                   size={20}
                 />
                 {!collapsed && <span>{item.name}</span>}
+                {isActive && !collapsed && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white"></div>
+                )}
               </Link>
             );
           })}
         </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-200/60">
+          {!collapsed && (
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                <span className="text-xs font-semibold text-purple-900">Upgrade</span>
+              </div>
+              <p className="text-xs text-slate-600 mb-3">
+                Get unlimited AI video generations
+              </p>
+              <button className="w-full text-xs py-2 px-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all duration-200">
+                Go Premium
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
