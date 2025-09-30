@@ -67,7 +67,7 @@ export default async function VideosPage() {
                     <Eye className="h-3 w-3 mr-1" />
                     {video.views}
                   </div>
-                  {video.fileSize !== null && video.fileSize !== undefined && (
+                  {video.fileSize != null && (
                     <span>{formatBytes(video.fileSize)}</span>
                   )}
                 </div>
