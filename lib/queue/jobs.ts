@@ -30,21 +30,44 @@ export interface TikTokUploadJobData {
   hashtags: string[];
 }
 
+const ensureQueueAvailable = (queueName: string) => {
+  if (!process.env.REDIS_URL) {
+    throw new Error('Redis is not configured. Please set REDIS_URL environment variable to enable job queue features.');
+  }
+};
+
 export async function createVideoGenerationJob(data: VideoGenerationJobData) {
+  ensureQueueAvailable('video-generation');
+  if (!videoQueue) {
+    throw new Error('Video queue is not initialized');
+  }
+  
   return videoQueue.add('generate-video', data, {
     priority: data.provider === AIProvider.RUNWAY ? 1 : 2,
   });
 }
 
 export async function createShopifySyncJob(data: ShopifySyncJobData) {
+  ensureQueueAvailable('shopify-sync');
+  if (!shopifyQueue) {
+    throw new Error('Shopify queue is not initialized');
+  }
+  
   return shopifyQueue.add('sync-products', data);
 }
 
 export async function createTikTokUploadJob(data: TikTokUploadJobData) {
+  ensureQueueAvailable('tiktok-upload');
+  if (!tiktokQueue) {
+    throw new Error('TikTok queue is not initialized');
+  }
+  
   return tiktokQueue.add('upload-video', data);
 }
 
 export async function retryJob(queueName: string, jobId: string) {
+  ensureQueueAvailable(queueName);
+  
   let queue;
   switch (queueName) {
     case 'video-generation':
@@ -58,6 +81,10 @@ export async function retryJob(queueName: string, jobId: string) {
       break;
     default:
       throw new Error(`Unknown queue: ${queueName}`);
+  }
+
+  if (!queue) {
+    throw new Error(`Queue ${queueName} is not initialized`);
   }
 
   const job = await queue.getJob(jobId);
