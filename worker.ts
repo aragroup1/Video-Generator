@@ -80,8 +80,8 @@ const videoWorker = new Worker<VideoGenerationJobData>(
             quality: settings.quality as any || 'medium',
             style: style,
             budget: budget,
-            productTitle: product.title,
-            productDescription: product.description || '',
+            productTitle: settings.productTitle || product.title,
+            productDescription: settings.productDescription || product.description || '',
           });
 
           await prisma.videoJob.update({
@@ -197,8 +197,8 @@ const videoWorker = new Worker<VideoGenerationJobData>(
             settings,
             generationId: `${provider}_${Date.now()}`,
             cost: provider === AIProvider.REPLICATE ? 
-              (settings.duration || 5) * 0.01 : // Estimated cost
-              (settings.duration || 5) * 10, // Credits
+              (settings.duration || 5) * 0.01 : 
+              (settings.duration || 5) * 10,
           },
         },
       });
