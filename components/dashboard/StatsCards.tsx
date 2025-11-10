@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Video, Clock, TrendingUp, Briefcase, Zap, CheckCircle } from 'lucide-react';
+import { Video, Clock, TrendingUp, Briefcase } from 'lucide-react';
 
 interface StatsCardsProps {
   totalVideos: number;
