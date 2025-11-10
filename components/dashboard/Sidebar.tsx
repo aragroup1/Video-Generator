@@ -22,6 +22,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Projects', href: '/dashboard/projects', icon: Briefcase },
   { name: 'Products', href: '/dashboard/products', icon: Package },
+  { name: 'Bulk Generate', href: '/dashboard/bulk-generate', icon: Zap }, // Add this
   { name: 'Videos', href: '/dashboard/videos', icon: Video },
   { name: 'Jobs', href: '/dashboard/jobs', icon: Clock },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
