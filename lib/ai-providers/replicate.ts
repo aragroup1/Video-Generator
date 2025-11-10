@@ -168,35 +168,33 @@ export class ReplicateProvider implements AIProvider {
   }
 
   private generatePrompt(
-    style: VideoStyle,
-    productTitle: string,
-    productDescription: string,
-    customPrompt?: string
-  ): string {
-    if (customPrompt) return customPrompt;
+  style: VideoStyle,
+  productTitle: string,
+  productDescription: string,
+  customPrompt?: string
+): string {
+  if (customPrompt) return customPrompt;
 
-    const stylePrompts: Record<VideoStyle, string> = {
-      [VideoStyle.ROTATION_360]: `360 degree rotation of ${productTitle}, smooth camera movement, professional product photography, studio lighting, white background`,
-      
-      [VideoStyle.LIFESTYLE_CASUAL]: `${productTitle} in everyday use, natural lighting, casual setting, relatable lifestyle scene, ${productDescription}`,
-      
-      [VideoStyle.LIFESTYLE_PREMIUM]: `Luxury lifestyle featuring ${productTitle}, elegant setting, sophisticated atmosphere, high-end production, ${productDescription}`,
-      
-      [VideoStyle.AD_TESTIMONIAL]: `Customer happily using ${productTitle}, genuine emotional response, testimonial style, warm lighting, ${productDescription}`,
-      
-      [VideoStyle.AD_FEATURE_FOCUS]: `Cinematic close-up highlighting features of ${productTitle}, dramatic lighting, professional advertisement style, ${productDescription}`,
-      
-      [VideoStyle.AD_PROBLEM_SOLUTION]: `Before and after transformation using ${productTitle}, problem-solving demonstration, clear visual narrative, ${productDescription}`,
-      
-      [VideoStyle.HOW_TO_USE]: `Step-by-step demonstration of ${productTitle}, clear instructional visuals, hands showing usage, ${productDescription}`
-
-      [VideoStyle.INFLUENCER_SHOWCASE]: `Influencer-style showcase of ${productTitle}, authentic presentation, engaging personality, lifestyle integration, ${productDescription}`,
-
+  const stylePrompts: Record<VideoStyle, string> = {
+    [VideoStyle.ROTATION_360]: `360 degree rotation of ${productTitle}, smooth camera movement, professional product photography, studio lighting, white background`,
     
-    };
+    [VideoStyle.LIFESTYLE_CASUAL]: `${productTitle} in everyday use, natural lighting, casual setting, relatable lifestyle scene, ${productDescription}`,
+    
+    [VideoStyle.LIFESTYLE_PREMIUM]: `Luxury lifestyle featuring ${productTitle}, elegant setting, sophisticated atmosphere, high-end production, ${productDescription}`,
+    
+    [VideoStyle.AD_TESTIMONIAL]: `Customer happily using ${productTitle}, genuine emotional response, testimonial style, warm lighting, ${productDescription}`,
+    
+    [VideoStyle.AD_FEATURE_FOCUS]: `Cinematic close-up highlighting features of ${productTitle}, dramatic lighting, professional advertisement style, ${productDescription}`,
+    
+    [VideoStyle.AD_PROBLEM_SOLUTION]: `Before and after transformation using ${productTitle}, problem-solving demonstration, clear visual narrative, ${productDescription}`,
+    
+    [VideoStyle.HOW_TO_USE]: `Step-by-step demonstration of ${productTitle}, clear instructional visuals, hands showing usage, ${productDescription}`,  // ADD COMMA HERE
+    
+    [VideoStyle.INFLUENCER_SHOWCASE]: `Influencer-style showcase of ${productTitle}, authentic presentation, engaging personality, lifestyle integration, ${productDescription}`,
+  };
 
-    return stylePrompts[style] || `Professional showcase of ${productTitle}, ${productDescription}`;
-  }
+  return stylePrompts[style] || `Professional showcase of ${productTitle}, ${productDescription}`;
+}
 
   async checkStatus(jobId: string): Promise<VideoGenerationResponse> {
     // Replicate typically returns immediately with a URL
