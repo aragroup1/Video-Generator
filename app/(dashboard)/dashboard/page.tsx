@@ -6,6 +6,9 @@ import prisma from '@/lib/prisma';
 import StatsCards from '@/components/dashboard/StatsCards';
 import RecentActivity from '@/components/dashboard/RecentActivity';
 import ProjectSelector from '@/components/dashboard/ProjectSelector';
+import QuickActions from '@/components/dashboard/QuickActions';
+import PerformanceChart from '@/components/dashboard/PerformanceChart';
+import { Sparkles } from 'lucide-react';
 
 export default async function DashboardPage() {
   const user = await requireAuth();
@@ -60,11 +63,31 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <ProjectSelector projects={projects} />
+      {/* Hero Section */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-blue-600 to-purple-700 p-8 text-white shadow-2xl">
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
+        <div className="relative z-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-6 h-6" />
+                <span className="text-sm font-semibold uppercase tracking-wider opacity-90">AI Video Studio</span>
+              </div>
+              <h1 className="text-4xl font-bold mb-2">Welcome back, {user.name || 'Creator'}!</h1>
+              <p className="text-lg text-purple-100 max-w-2xl">
+                Transform your products into stunning videos with AI-powered automation
+              </p>
+            </div>
+            <ProjectSelector projects={projects} />
+          </div>
+        </div>
+        
+        {/* Decorative elements */}
+        <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute -left-20 -bottom-20 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl"></div>
       </div>
 
+      {/* Stats Grid */}
       <StatsCards
         totalVideos={stats[0]}
         activeJobs={stats[1]}
@@ -72,38 +95,25 @@ export default async function DashboardPage() {
         totalProjects={projects.length}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Suspense fallback={<div>Loading...</div>}>
-          <RecentActivity userId={user.id} />
-        </Suspense>
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Recent Activity - Takes 2 columns */}
+        <div className="lg:col-span-2">
+          <Suspense fallback={<div className="animate-pulse bg-white/50 rounded-2xl h-96"></div>}>
+            <RecentActivity userId={user.id} />
+          </Suspense>
+        </div>
         
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-          <div className="space-y-3">
-            <a
-              href="/dashboard/products"
-              className="block p-4 border rounded-lg hover:bg-gray-50 transition"
-            >
-              <div className="font-medium">Sync Products</div>
-              <div className="text-sm text-gray-600">Import products from Shopify</div>
-            </a>
-            <a
-              href="/dashboard/videos"
-              className="block p-4 border rounded-lg hover:bg-gray-50 transition"
-            >
-              <div className="font-medium">Generate Videos</div>
-              <div className="text-sm text-gray-600">Create AI videos for products</div>
-            </a>
-            <a
-              href="/dashboard/settings"
-              className="block p-4 border rounded-lg hover:bg-gray-50 transition"
-            >
-              <div className="font-medium">Configure APIs</div>
-              <div className="text-sm text-gray-600">Set up AI provider keys</div>
-            </a>
-          </div>
+        {/* Quick Actions */}
+        <div className="lg:col-span-1">
+          <QuickActions />
         </div>
       </div>
+
+      {/* Performance Chart */}
+      <Suspense fallback={<div className="animate-pulse bg-white/50 rounded-2xl h-80"></div>}>
+        <PerformanceChart userId={user.id} />
+      </Suspense>
     </div>
   );
 }
