@@ -209,7 +209,7 @@ const mapStyleToVideoType = (style: VideoStyle): string => {
       [VideoStyle.AD_FEATURE_FOCUS]: 'PRODUCT_DEMO',
       [VideoStyle.AD_PROBLEM_SOLUTION]: 'PRODUCT_DEMO',
       [VideoStyle.HOW_TO_USE]: 'PRODUCT_DEMO',
-      [VideoStyle.INFLUENCER_SHOWCASE]: 'LIFESTYLE',  // ADD THIS LINE
+      [VideoStyle.INFLUENCER_SHOWCASE]: 'LIFESTYLE',
     };
     return mapping[style] || 'PRODUCT_DEMO';
   };
@@ -270,6 +270,7 @@ const mapStyleToVideoType = (style: VideoStyle): string => {
       [VideoStyle.AD_FEATURE_FOCUS]: '🎯',
       [VideoStyle.AD_PROBLEM_SOLUTION]: '💡',
       [VideoStyle.HOW_TO_USE]: '📖',
+      [VideoStyle.INFLUENCER_SHOWCASE]: '✨',
     };
     return icons[style] || '🎬';
   };
