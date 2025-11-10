@@ -27,6 +27,7 @@ model Project {
   description     String?
   shopifyUrl      String?   @map("shopify_url")
   shopifyToken    String?   @map("shopify_token")
+  replicateKey    String?   @map("replicate_key")  // ADD THIS
   runwayKey       String?   @map("runway_key")
   lumaKey         String?   @map("luma_key")
   pikaKey         String?   @map("pika_key")
@@ -41,6 +42,7 @@ model Project {
   products        Product[]
   videoJobs       VideoJob[]
   videos          Video[]
+  contentCalendar ContentCalendar[]
   
   @@index([userId])
   @@map("projects")
@@ -57,16 +59,47 @@ model Product {
   tags        String[]
   price       Decimal? @db.Decimal(10, 2)
   currency    String   @default("USD")
+  
+  // Priority fields
+  isFlagged     Boolean   @default(false) @map("is_flagged")
+  flaggedAt     DateTime? @map("flagged_at")
+  flaggedBy     String?   @map("flagged_by")
+  priority      Int       @default(0)
+  viewCount     Int       @default(0) @map("view_count")
+  salesCount    Int       @default(0) @map("sales_count")
+  lastSyncedAt  DateTime? @map("last_synced_at")
+  
+  // Video generation tracking
+  lastVideoGeneratedAt DateTime? @map("last_video_generated_at")
+  videoGenerationCount Int @default(0) @map("video_generation_count")
+  
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   
   project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   videoJobs   VideoJob[]
   videos      Video[]
+  metrics     ProductMetrics[]
   
   @@unique([projectId, shopifyId])
   @@index([projectId])
   @@map("products")
+}
+
+model ProductMetrics {
+  id          String   @id @default(cuid())
+  productId   String   @map("product_id")
+  date        DateTime @db.Date
+  views       Int      @default(0)
+  sales       Int      @default(0)
+  revenue     Decimal  @db.Decimal(10, 2)
+  
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([productId, date])
+  @@index([productId])
+  @@index([date])
+  @@map("product_metrics")
 }
 
 model VideoJob {
@@ -115,10 +148,32 @@ model Video {
   project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   product       Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   job           VideoJob?  @relation(fields: [jobId], references: [id])
+  contentCalendar ContentCalendar[]
   
   @@index([projectId])
   @@index([productId])
   @@map("videos")
+}
+
+model ContentCalendar {
+  id            String    @id @default(cuid())
+  projectId     String    @map("project_id")
+  videoId       String    @map("video_id")
+  platform      Platform
+  scheduledFor  DateTime  @map("scheduled_for")
+  status        PublishStatus @default(SCHEDULED)
+  caption       String    @db.Text
+  hashtags      String[]
+  publishedAt   DateTime? @map("published_at")
+  performance   Json?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  video         Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  
+  @@index([projectId, scheduledFor])
+  @@index([status])
+  @@map("content_calendar")
 }
 
 enum VideoType {
@@ -126,6 +181,7 @@ enum VideoType {
   LIFESTYLE
   TESTIMONIAL
   ROTATION_360
+  INFLUENCER_SHOWCASE  // ADD THIS
 }
 
 enum AIProvider {
@@ -141,4 +197,18 @@ enum JobStatus {
   COMPLETED
   FAILED
   RETRYING
+}
+
+enum Platform {
+  TIKTOK
+  INSTAGRAM_REELS
+  YOUTUBE_SHORTS
+  FACEBOOK_REELS
+}
+
+enum PublishStatus {
+  SCHEDULED
+  PUBLISHED
+  FAILED
+  CANCELLED
 }
