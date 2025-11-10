@@ -17,7 +17,8 @@ export enum VideoStyle {
   AD_TESTIMONIAL = "ad_testimonial",
   AD_FEATURE_FOCUS = "ad_feature_focus",
   AD_PROBLEM_SOLUTION = "ad_problem_solution",
-  HOW_TO_USE = "how_to_use"
+  HOW_TO_USE = "how_to_use",
+  INFLUENCER_SHOWCASE = "influencer_showcase"  // ADD THIS
 }
 
 export enum BudgetLevel {
