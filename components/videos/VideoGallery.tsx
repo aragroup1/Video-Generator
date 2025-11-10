@@ -16,32 +16,35 @@ import toast from 'react-hot-toast';
 interface VideoData {
   id: string;
   fileUrl: string;
-  thumbnailUrl?: string;
-  duration?: number;
-  fileSize?: bigint;
+  thumbnailUrl: string | null;  // CHANGED from string | undefined
+  duration: number | null;       // CHANGED from number | undefined
+  fileSize: bigint | null;       // CHANGED from bigint | undefined
   videoType: string;
   createdAt: Date;
   views: number;
   isPublished: boolean;
   product: {
     title: string;
-    price?: number;
+    price: any;  // Can be Decimal or number
     shopifyId: string;
   };
-  metadata?: {
-    model?: string;
-    cost?: number;
-    prompt?: string;
-  };
+  metadata?: any;  // CHANGED to any since it's Json type
 }
 
 interface VideoGalleryProps {
   projectId: string;
-  initialVideos?: VideoData[];
+  initialVideos?: any[];  // Accept any[] from server and transform
 }
 
 export default function VideoGallery({ projectId, initialVideos = [] }: VideoGalleryProps) {
-  const [videos, setVideos] = useState<VideoData[]>(initialVideos);
+  // Transform the videos to ensure proper types
+  const [videos, setVideos] = useState<VideoData[]>(
+    initialVideos.map(v => ({
+      ...v,
+      createdAt: new Date(v.createdAt),
+      metadata: v.metadata || {},
+    }))
+  );
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
@@ -71,7 +74,11 @@ export default function VideoGallery({ projectId, initialVideos = [] }: VideoGal
 
       const response = await fetch(`/api/videos?${params}`);
       const data = await response.json();
-      setVideos(data.videos);
+      setVideos(data.videos.map((v: any) => ({
+        ...v,
+        createdAt: new Date(v.createdAt),
+        metadata: v.metadata || {},
+      })));
     } catch (error) {
       toast.error('Failed to load videos');
     } finally {
@@ -214,7 +221,7 @@ export default function VideoGallery({ projectId, initialVideos = [] }: VideoGal
                         {formatDuration(video.duration || 0)}
                       </span>
                       <span className="text-sm">
-                        {formatBytes(video.fileSize || 0)}
+                        {formatBytes(video.fileSize || BigInt(0))}
                       </span>
                     </div>
                     
@@ -280,17 +287,17 @@ export default function VideoGallery({ projectId, initialVideos = [] }: VideoGal
                   </div>
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    <span>{formatDistanceToNow(new Date(video.createdAt))}</span>
+                    <span>{formatDistanceToNow(video.createdAt)}</span>
                   </div>
                 </div>
 
-                {video.metadata && (
+                {video.metadata && video.metadata.model && (
                   <div className="pt-2 border-t border-gray-100">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-gray-500">Model: {video.metadata.model}</span>
                       {video.metadata.cost && (
                         <span className="font-semibold text-purple-600">
-                          ${video.metadata.cost.toFixed(3)}
+                          ${Number(video.metadata.cost).toFixed(3)}
                         </span>
                       )}
                     </div>
