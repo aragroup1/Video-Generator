@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { formatDistanceToNow as dateFnsFormatDistanceToNow } from 'date-fns';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -46,4 +47,9 @@ export function truncate(str: string, length = 50): string {
 
 export function generateId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+// Re-export date-fns formatDistanceToNow
+export function formatDistanceToNow(date: Date | number, options?: { addSuffix?: boolean }): string {
+  return dateFnsFormatDistanceToNow(date, options);
 }
