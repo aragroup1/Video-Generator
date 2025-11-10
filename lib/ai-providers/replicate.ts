@@ -33,7 +33,7 @@ const REPLICATE_MODELS: ReplicateModel[] = [
     version: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
     costPerSecond: 0.5,
     quality: 'standard',
-    bestFor: [VideoStyle.ROTATION_360, VideoStyle.HOW_TO_USE]
+    bestFor: [VideoStyle.ROTATION_360, VideoStyle.HOW_TO_USE, VideoStyle.INFLUENCER_SHOWCASE]
   },
   {
     name: 'animatediff',
@@ -189,6 +189,10 @@ export class ReplicateProvider implements AIProvider {
       [VideoStyle.AD_PROBLEM_SOLUTION]: `Before and after transformation using ${productTitle}, problem-solving demonstration, clear visual narrative, ${productDescription}`,
       
       [VideoStyle.HOW_TO_USE]: `Step-by-step demonstration of ${productTitle}, clear instructional visuals, hands showing usage, ${productDescription}`
+
+      [VideoStyle.INFLUENCER_SHOWCASE]: `Influencer-style showcase of ${productTitle}, authentic presentation, engaging personality, lifestyle integration, ${productDescription}`,
+
+    
     };
 
     return stylePrompts[style] || `Professional showcase of ${productTitle}, ${productDescription}`;
