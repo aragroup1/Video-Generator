@@ -43,10 +43,17 @@ module.exports = {
           '0%': { transform: 'translateY(-10px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        blob: {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '25%': { transform: 'translate(20px, -50px) scale(1.1)' },
+          '50%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+          '75%': { transform: 'translate(50px, 50px) scale(1.05)' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.5s ease-out',
         'slide-in': 'slide-in 0.3s ease-out',
+        blob: 'blob 10s infinite',
       },
     },
   },
