@@ -37,7 +37,7 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <>
+    <div>
       {/* Mobile menu button */}
       <button
         className="lg:hidden fixed top-4 left-4 z-50 p-3 rounded-xl bg-white shadow-xl border border-gray-200 hover:shadow-2xl transition-all"
@@ -134,4 +134,25 @@ export default function Sidebar() {
           <div className="p-4 border-t border-gray-200/60">
             <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl p-5 text-white shadow-xl relative overflow-hidden">
               {/* Background decoration */}
-              <div className="absolute
+              <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="absolute -left-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+              
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-5 h-5" />
+                  <span className="text-sm font-bold">Upgrade to Pro</span>
+                </div>
+                <p className="text-xs text-purple-100 mb-4 leading-relaxed">
+                  Unlock unlimited video generations and premium features
+                </p>
+                <button className="w-full text-sm py-2.5 px-4 bg-white text-purple-600 rounded-xl hover:shadow-xl transition-all duration-200 font-semibold">
+                  Go Premium →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
