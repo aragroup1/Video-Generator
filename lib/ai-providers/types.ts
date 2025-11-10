@@ -19,6 +19,12 @@ export interface VideoGenerationResponse {
   resultUrl?: string;
   error?: string;
   estimatedTime?: number;
+  metadata?: {  // ADD THIS
+    model?: string;
+    cost?: number;
+    prompt?: string;
+    [key: string]: any;
+  };
 }
 
 export interface AIProvider {
