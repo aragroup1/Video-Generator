@@ -199,7 +199,7 @@ export default function BulkVideoGenerator({ projectId }: BulkVideoGeneratorProp
     }
   };
 
-  const mapStyleToVideoType = (style: VideoStyle): string => {
+const mapStyleToVideoType = (style: VideoStyle): string => {
     // Map VideoStyle to VideoType enum from Prisma
     const mapping: Record<VideoStyle, string> = {
       [VideoStyle.ROTATION_360]: 'ROTATION_360',
@@ -209,6 +209,7 @@ export default function BulkVideoGenerator({ projectId }: BulkVideoGeneratorProp
       [VideoStyle.AD_FEATURE_FOCUS]: 'PRODUCT_DEMO',
       [VideoStyle.AD_PROBLEM_SOLUTION]: 'PRODUCT_DEMO',
       [VideoStyle.HOW_TO_USE]: 'PRODUCT_DEMO',
+      [VideoStyle.INFLUENCER_SHOWCASE]: 'LIFESTYLE',  // ADD THIS LINE
     };
     return mapping[style] || 'PRODUCT_DEMO';
   };
