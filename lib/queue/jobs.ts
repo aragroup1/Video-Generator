@@ -13,6 +13,9 @@ export interface VideoGenerationJobData {
     aspectRatio?: string;
     quality?: string;
     style?: string;
+    budget?: string;  // ADD THIS
+    productTitle?: string;  // ADD THIS
+    productDescription?: string;  // ADD THIS
   };
   images: string[];
 }
