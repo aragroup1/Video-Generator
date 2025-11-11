@@ -13,7 +13,7 @@ cmds = [
 ]
 
 [start]
-cmd = "npx prisma db push && npm start"
+cmd = "npx prisma db push && node .next/standalone/server.js"
 
 [variables]
 NODE_ENV = "production"
