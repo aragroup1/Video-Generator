@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // Remove output: 'standalone' line
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
@@ -22,8 +22,6 @@ const nextConfig = {
       },
     ],
   },
-  // Ensure public and static files are included
-  outputFileTracing: true,
 };
 
 module.exports = nextConfig;
