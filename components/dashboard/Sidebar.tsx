@@ -10,13 +10,13 @@ import {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Projects', href: '/dashboard/projects', icon: Briefcase },
-  { name: 'Products', href: '/dashboard/products', icon: Package },
+  { name: 'Projects', href: '/projects', icon: Briefcase },
+  { name: 'Products', href: '/products', icon: Package },
   { name: 'Bulk Generate', href: '/dashboard/bulk-generate', icon: Zap },
-  { name: 'Videos', href: '/dashboard/videos', icon: Video },
+  { name: 'Videos', href: '/videos', icon: Video },
   { name: 'Video Gallery', href: '/dashboard/videos/gallery', icon: LayoutGrid },
-  { name: 'Jobs', href: '/dashboard/jobs', icon: Clock },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { name: 'Jobs', href: '/jobs', icon: Clock },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export default function Sidebar() {
