@@ -60,3 +60,14 @@
     "postcss": "8.4.32"
   }
 }
+
+{
+  "scripts": {
+    "dev": "next dev",
+    "clean": "rm -rf .next/standalone .next/static .next/server || true",
+    "prebuild": "npm run clean",
+    "build": "NODE_ENV=production next build",
+    "start": "next start",
+    "lint": "next lint"
+  }
+}
