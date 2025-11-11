@@ -22,27 +22,8 @@ const nextConfig = {
       },
     ],
   },
-  async headers() {
-    return [
-      {
-        source: '/api/jobs/:id/progress',
-        headers: [
-          {
-            key: 'Content-Type',
-            value: 'text/event-stream',
-          },
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-transform',
-          },
-          {
-            key: 'Connection',
-            value: 'keep-alive',
-          },
-        ],
-      },
-    ];
-  },
+  // Ensure public and static files are included
+  outputFileTracing: true,
 };
 
 module.exports = nextConfig;
