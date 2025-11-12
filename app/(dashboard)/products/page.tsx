@@ -19,11 +19,12 @@ async function getDefaultProject(userId: string) {
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: { page?: string; search?: string };
+  searchParams: Promise<{ page?: string; search?: string }>;
 }) {
   const user = await requireAuth();
-  const page = parseInt(searchParams.page || '1');
-  const search = searchParams.search || '';
+  const params = await searchParams;
+  const page = parseInt(params.page || '1');
+  const search = params.search || '';
   const pageSize = 20;
 
   const defaultProject = await getDefaultProject(user.id);
