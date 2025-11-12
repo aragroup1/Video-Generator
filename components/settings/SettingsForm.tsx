@@ -271,10 +271,3 @@ export default function SettingsForm({ project }: SettingsFormProps) {
     </Card>
   );
 }
-```
-
-Make sure the file structure is:
-```
-components/
-  settings/
-    SettingsForm.tsx  ← Create this file
