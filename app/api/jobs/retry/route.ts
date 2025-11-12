@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { retryJob } from '@/lib/queue/jobs';
 import prisma from '@/lib/prisma';
+import { addVideoJob } from '@/lib/queue';
 
 export async function POST(
   request: NextRequest,
@@ -11,21 +11,15 @@ export async function POST(
     const user = await requireAuth();
     const { id } = await params;
 
-    // Verify job ownership
     const job = await prisma.videoJob.findFirst({
       where: {
-        id: id,
-        project: {
-          userId: user.id,
-        },
+        id,
+        project: { userId: user.id },
       },
     });
 
     if (!job) {
-      return NextResponse.json(
-        { error: 'Job not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
     if (job.status !== 'FAILED') {
@@ -35,12 +29,9 @@ export async function POST(
       );
     }
 
-    // Retry the job
-    await retryJob('video-generation', id);
-
     // Update job status
     await prisma.videoJob.update({
-      where: { id: id },
+      where: { id },
       data: {
         status: 'PENDING',
         errorMessage: null,
@@ -48,11 +39,20 @@ export async function POST(
       },
     });
 
+    // Try to re-queue
+    try {
+      await addVideoJob({
+        jobId: job.id,
+        productId: job.productId,
+        projectId: job.projectId,
+        settings: job.settings,
+      });
+    } catch (queueError: any) {
+      console.warn('Failed to add to queue:', queueError.message);
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Failed to retry job' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
