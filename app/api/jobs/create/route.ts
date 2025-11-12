@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { requireAuth } from '@/lib/auth';
-import { createVideoGenerationJob } from '@/lib/queue/jobs';
+import { addVideoJob } from '@/lib/queue';
 import { VideoType, AIProvider, JobStatus } from '@prisma/client';
 
 const createJobSchema = z.object({
@@ -16,6 +16,9 @@ const createJobSchema = z.object({
     aspectRatio: z.string().optional(),
     quality: z.string().optional(),
     style: z.string().optional(),
+    budget: z.string().optional(),
+    productTitle: z.string().optional(),
+    productDescription: z.string().optional(),
   }),
 });
 
@@ -76,18 +79,24 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Queue the job
-    await createVideoGenerationJob({
-      jobId: videoJob.id,
-      projectId: data.projectId,
-      productId: data.productId,
-      provider: data.provider,
-      videoType: data.videoType,
-      settings: data.settings,
-      images,
-    });
+    // Try to add to queue
+    try {
+      await addVideoJob({
+        jobId: videoJob.id,
+        productId: data.productId,
+        projectId: data.projectId,
+        settings: data.settings,
+      });
+    } catch (queueError: any) {
+      console.warn('Failed to add to queue:', queueError.message);
+      // Job is still created in DB, just not queued yet
+    }
 
-    return NextResponse.json(videoJob);
+    return NextResponse.json({
+      success: true,
+      jobId: videoJob.id,
+      message: 'Job created successfully.',
+    });
   } catch (error: any) {
     console.error('Create job error:', error);
     return NextResponse.json(
