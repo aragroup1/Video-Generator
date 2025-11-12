@@ -1,100 +1,63 @@
-import { videoQueue, shopifyQueue, tiktokQueue } from './config';
-import { VideoType, AIProvider } from '@prisma/client';
+import { videoQueue } from '../queue';
+import prisma from '../prisma';
+import { JobStatus } from '@prisma/client';
 
-export interface VideoGenerationJobData {
-  jobId: string;
-  projectId: string;
-  productId: string;
-  provider: AIProvider;
-  videoType: VideoType;
-  settings: {
-    prompt?: string;
-    duration?: number;
-    aspectRatio?: string;
-    quality?: string;
-    style?: string;
-    budget?: string;  // ADD THIS
-    productTitle?: string;  // ADD THIS
-    productDescription?: string;  // ADD THIS
-  };
-  images: string[];
-}
-
-export interface ShopifySyncJobData {
-  projectId: string;
-  shopifyUrl: string;
-  accessToken: string;
-}
-
-export interface TikTokUploadJobData {
-  videoId: string;
-  projectId: string;
-  caption: string;
-  hashtags: string[];
-}
-
-const ensureQueueAvailable = (queueName: string) => {
-  if (!process.env.REDIS_URL) {
-    throw new Error('Redis is not configured. Please set REDIS_URL environment variable to enable job queue features.');
-  }
-};
-
-export async function createVideoGenerationJob(data: VideoGenerationJobData) {
-  ensureQueueAvailable('video-generation');
-  if (!videoQueue) {
-    throw new Error('Video queue is not initialized');
-  }
-  
-  return videoQueue.add('generate-video', data, {
-    priority: data.provider === AIProvider.RUNWAY ? 1 : 2,
+export async function retryFailedJob(jobId: string) {
+  const job = await prisma.videoJob.findUnique({
+    where: { id: jobId },
   });
+
+  if (!job || job.status !== 'FAILED') {
+    throw new Error('Job not found or not in failed state');
+  }
+
+  if (!videoQueue) {
+    throw new Error('Redis not configured');
+  }
+
+  // Add job back to queue
+  await videoQueue.add('generate-video', {
+    jobId: job.id,
+    productId: job.productId,
+    projectId: job.projectId,
+    settings: job.settings,
+  });
+
+  // Update job status
+  await prisma.videoJob.update({
+    where: { id: jobId },
+    data: {
+      status: JobStatus.PENDING,
+      errorMessage: null,
+      progress: 0,
+    },
+  });
+
+  return job;
 }
 
-export async function createShopifySyncJob(data: ShopifySyncJobData) {
-  ensureQueueAvailable('shopify-sync');
-  if (!shopifyQueue) {
-    throw new Error('Shopify queue is not initialized');
-  }
-  
-  return shopifyQueue.add('sync-products', data);
-}
+export async function cancelJob(jobId: string) {
+  const job = await prisma.videoJob.findUnique({
+    where: { id: jobId },
+  });
 
-export async function createTikTokUploadJob(data: TikTokUploadJobData) {
-  ensureQueueAvailable('tiktok-upload');
-  if (!tiktokQueue) {
-    throw new Error('TikTok queue is not initialized');
-  }
-  
-  return tiktokQueue.add('upload-video', data);
-}
-
-export async function retryJob(queueName: string, jobId: string) {
-  ensureQueueAvailable(queueName);
-  
-  let queue;
-  switch (queueName) {
-    case 'video-generation':
-      queue = videoQueue;
-      break;
-    case 'shopify-sync':
-      queue = shopifyQueue;
-      break;
-    case 'tiktok-upload':
-      queue = tiktokQueue;
-      break;
-    default:
-      throw new Error(`Unknown queue: ${queueName}`);
-  }
-
-  if (!queue) {
-    throw new Error(`Queue ${queueName} is not initialized`);
-  }
-
-  const job = await queue.getJob(jobId);
   if (!job) {
-    throw new Error(`Job ${jobId} not found`);
+    throw new Error('Job not found');
   }
 
-  await job.retry();
+  if (job.status !== 'PENDING' && job.status !== 'PROCESSING') {
+    throw new Error('Can only cancel pending or processing jobs');
+  }
+
+  // Update job status to failed
+  await prisma.videoJob.update({
+    where: { id: jobId },
+    data: {
+      status: JobStatus.FAILED,
+      errorMessage: 'Cancelled by user',
+      completedAt: new Date(),
+    },
+  });
+
   return job;
 }
