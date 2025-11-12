@@ -34,7 +34,6 @@ export async function POST(
         status: 'PENDING',
         errorMessage: null,
         progress: 0,
-        attempts: { increment: 1 },
       },
     });
 
