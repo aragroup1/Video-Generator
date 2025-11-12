@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { requireAuth } from '@/lib/auth';
-import { createShopifySyncJob } from '@/lib/queue/jobs';
 import prisma from '@/lib/prisma';
 
-const syncSchema = z.object({
-  projectId: z.string(),
-});
-
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth();
-    const body = await request.json();
-    const { projectId } = syncSchema.parse(body);
+    const { searchParams } = new URL(request.url);
+    const projectId = searchParams.get('projectId');
 
-    // Get project with Shopify credentials
+    if (!projectId) {
+      return NextResponse.json(
+        { error: 'Project ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Verify project ownership
     const project = await prisma.project.findFirst({
       where: {
         id: projectId,
@@ -29,27 +30,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!project.shopifyUrl || !project.shopifyToken) {
-      return NextResponse.json(
-        { error: 'Shopify credentials not configured' },
-        { status: 400 }
-      );
-    }
-
-    // Queue sync job
-    const job = await createShopifySyncJob({
-      projectId: project.id,
-      shopifyUrl: project.shopifyUrl,
-      accessToken: project.shopifyToken,
+    const products = await prisma.product.findMany({
+      where: {
+        projectId,
+      },
+      include: {
+        _count: {
+          select: {
+            videos: true,
+            videoJobs: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
 
-    return NextResponse.json({
-      success: true,
-      jobId: job.id,
-    });
+    return NextResponse.json({ products });
   } catch (error: any) {
+    console.error('Get products error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to sync products' },
+      { error: error.message || 'Failed to get products' },
       { status: 400 }
     );
   }
