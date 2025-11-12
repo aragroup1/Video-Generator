@@ -45,16 +45,28 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
     let provider;
     switch (job.provider) {
       case AIProvider.LUMA:
-        provider = new LumaProvider(job.project.lumaKey!);
+        if (!job.project.lumaKey) {
+          throw new Error('Luma API key not configured');
+        }
+        provider = new LumaProvider({ apiKey: job.project.lumaKey });
         break;
       case AIProvider.RUNWAY:
-        provider = new RunwayProvider(job.project.runwayKey!);
+        if (!job.project.runwayKey) {
+          throw new Error('Runway API key not configured');
+        }
+        provider = new RunwayProvider({ apiKey: job.project.runwayKey });
         break;
       case AIProvider.PIKA:
-        provider = new PikaProvider(job.project.pikaKey!);
+        if (!job.project.pikaKey) {
+          throw new Error('Pika API key not configured');
+        }
+        provider = new PikaProvider({ apiKey: job.project.pikaKey });
         break;
       case AIProvider.REPLICATE:
-        provider = new ReplicateProvider(job.project.replicateKey!);
+        if (!job.project.replicateKey) {
+          throw new Error('Replicate API key not configured');
+        }
+        provider = new ReplicateProvider({ apiKey: job.project.replicateKey });
         break;
       default:
         throw new Error(`Unsupported provider: ${job.provider}`);
