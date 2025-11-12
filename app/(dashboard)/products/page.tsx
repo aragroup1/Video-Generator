@@ -5,7 +5,8 @@ import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import ProductList from '@/components/products/ProductList';
 import SyncButton from '@/components/products/SyncButton';
-import { RefreshCw } from 'lucide-react';
+import ProductSearch from '@/components/products/ProductSearch';
+import Pagination from '@/components/products/Pagination';
 
 async function getDefaultProject(userId: string) {
   const project = await prisma.project.findFirst({
@@ -15,9 +16,16 @@ async function getDefaultProject(userId: string) {
   return project;
 }
 
-export default async function ProductsPage() {
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: { page?: string; search?: string };
+}) {
   const user = await requireAuth();
-  
+  const page = parseInt(searchParams.page || '1');
+  const search = searchParams.search || '';
+  const pageSize = 20;
+
   const defaultProject = await getDefaultProject(user.id);
 
   if (!defaultProject) {
@@ -28,38 +36,76 @@ export default async function ProductsPage() {
     );
   }
 
-  const products = await prisma.product.findMany({
-    where: {
-      projectId: defaultProject.id,
-    },
-    include: {
-      _count: {
-        select: {
-          videos: true,
-          videoJobs: true,
+  // Build where clause for search
+  const where: any = {
+    projectId: defaultProject.id,
+  };
+
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: 'insensitive' } },
+      { description: { contains: search, mode: 'insensitive' } },
+      { tags: { hasSome: [search] } },
+    ];
+  }
+
+  // Get total count and products
+  const [totalProducts, products] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.product.findMany({
+      where,
+      include: {
+        _count: {
+          select: {
+            videos: true,
+            videoJobs: true,
+          },
         },
       },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+
+  const totalPages = Math.ceil(totalProducts / pageSize);
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Products</h1>
           <p className="text-gray-600 mt-2">
-            {products.length} products • Last synced: {defaultProject.updatedAt.toLocaleDateString()}
+            {totalProducts} products • Page {page} of {totalPages}
           </p>
         </div>
         <SyncButton projectId={defaultProject.id} />
       </div>
 
-      <Suspense fallback={<div>Loading products...</div>}>
-        <ProductList products={products} projectId={defaultProject.id} />
+      {/* Search */}
+      <ProductSearch />
+
+      {/* Product List */}
+      <Suspense fallback={<div className="text-center py-12">Loading products...</div>}>
+        {products.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-xl border-2 border-dashed border-gray-300">
+            <p className="text-gray-500 mb-4">
+              {search ? `No products found matching "${search}"` : 'No products yet'}
+            </p>
+            {!search && <SyncButton projectId={defaultProject.id} />}
+          </div>
+        ) : (
+          <ProductList products={products} projectId={defaultProject.id} />
+        )}
       </Suspense>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination currentPage={page} totalPages={totalPages} />
+      )}
     </div>
   );
 }
