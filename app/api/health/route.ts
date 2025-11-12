@@ -52,3 +52,13 @@ export async function GET() {
     );
   }
 }
+
+export async function GET() {
+  return NextResponse.json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'ai-video-dashboard'
+  });
+}
+
+export const dynamic = 'force-dynamic';
