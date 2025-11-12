@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import ProductList from '@/components/products/ProductList';
-import { Button } from '@/components/ui/button';
+import SyncButton from '@/components/products/SyncButton';
 import { RefreshCw } from 'lucide-react';
 
 async function getDefaultProject(userId: string) {
@@ -24,11 +24,6 @@ export default async function ProductsPage() {
     return (
       <div className="text-center py-12">
         <p className="text-gray-600">Please create a project first.</p>
-        <Button 
-          className="mt-4"
-        >
-          Create Project
-        </Button>
       </div>
     );
   }
@@ -53,11 +48,13 @@ export default async function ProductsPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Products</h1>
-        <Button>
-          <RefreshCw size={16} className="mr-2" />
-          Sync from Shopify
-        </Button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Products</h1>
+          <p className="text-gray-600 mt-2">
+            {products.length} products • Last synced: {defaultProject.updatedAt.toLocaleDateString()}
+          </p>
+        </div>
+        <SyncButton projectId={defaultProject.id} />
       </div>
 
       <Suspense fallback={<div>Loading products...</div>}>
