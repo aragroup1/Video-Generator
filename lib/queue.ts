@@ -29,27 +29,3 @@ export function getQueueStatus() {
   }
   return { available: true, queue: videoQueue };
 }
-```
-
-### **Check Redis Configuration in Railway:**
-
-1. Go to your Railway project
-2. Click on the Redis service
-3. Go to **Variables** tab
-4. Look for these variables:
-   - `REDIS_URL` (should be like `redis://default:password@redis.railway.internal:6379`)
-   - `REDIS_PRIVATE_URL` (internal network)
-   - `REDIS_PUBLIC_URL` (external access)
-
-5. **Copy the `REDIS_PRIVATE_URL`** and add it to your **main app service** as `REDIS_URL`
-
-The issue is that your app might be using a reference variable that isn't properly linked. Try:
-
-**Option 1: Use the private URL directly**
-```
-REDIS_URL=redis://default:PASSWORD@redis.railway.internal:6379
-```
-
-**Option 2: Use Redis public URL temporarily**
-```
-REDIS_URL=redis://default:PASSWORD@XXXX.railway.app:6379
