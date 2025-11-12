@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
           where: {
             projectId_shopifyId: {
               projectId,
-              shopifyId: product.id,
+              shopifyId: String(product.id), // CONVERT TO STRING
             },
           },
           update: {
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
           },
           create: {
             projectId,
-            shopifyId: product.id,
+            shopifyId: String(product.id), // CONVERT TO STRING
             title: product.title,
             description: product.body_html,
             images: product.images.map(img => img.src),
