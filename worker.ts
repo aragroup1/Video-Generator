@@ -32,6 +32,12 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
       throw new Error('Job not found');
     }
 
+    // Validate product has images
+    const productImages = job.product.images as string[] | null;
+    if (!productImages || productImages.length === 0) {
+      throw new Error('Product has no images');
+    }
+
     // Update status to processing
     await prisma.videoJob.update({
       where: { id: jobId },
@@ -72,7 +78,7 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
         throw new Error(`Unsupported provider: ${job.provider}`);
     }
 
-// Generate video
+    // Generate video
     await prisma.videoJob.update({
       where: { id: jobId },
       data: { progress: 30 },
@@ -80,7 +86,7 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
 
     const videoUrl = await provider.generateVideo({
       prompt: job.prompt || settings.prompt || `Generate a product video for ${job.product.title}`,
-      imageUrl: job.product.images[0],
+      imageUrl: productImages[0],
       duration: settings.duration || 5,
       aspectRatio: settings.aspectRatio || '9:16',
       style: settings.style || '360_rotation',
@@ -102,7 +108,7 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
         productId,
         title: `${job.product.title} - ${job.jobType}`,
         url: videoUrl,
-        thumbnailUrl: job.product.images[0],
+        thumbnailUrl: productImages[0],
         duration: settings.duration || 5,
         resolution: settings.aspectRatio || '9:16',
         status: 'COMPLETED',
