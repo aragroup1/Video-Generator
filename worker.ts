@@ -84,7 +84,7 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
       data: { progress: 30 },
     });
 
-    const videoUrl = await provider.generateVideo({
+    const videoResult = await provider.generateVideo({
       prompt: job.prompt || settings.prompt || `Generate a product video for ${job.product.title}`,
       imageUrl: productImages[0],
       duration: settings.duration || 5,
@@ -101,14 +101,14 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
       data: { progress: 80 },
     });
 
-// Create video record
+    // Create video record
     const video = await prisma.video.create({
       data: {
         projectId,
         productId,
         status: 'COMPLETED',
         metadata: {
-          videoUrl: videoUrl,
+          videoUrl: videoResult.url,
           provider: job.provider,
           jobType: job.jobType,
           settings,
@@ -116,6 +116,7 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
           thumbnailUrl: productImages[0],
           duration: settings.duration || 5,
           aspectRatio: settings.aspectRatio || '9:16',
+          estimatedCost: videoResult.estimatedCost,
         },
       },
     });
