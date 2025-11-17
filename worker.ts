@@ -107,7 +107,7 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
         projectId,
         productId,
         videoType: job.jobType,
-        fileUrl: videoResult.url,
+        fileUrl: typeof videoResult === 'string' ? videoResult : (videoResult.videoUrl || videoResult.url || ''),
         metadata: {
           provider: job.provider,
           settings,
@@ -115,7 +115,7 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
           thumbnailUrl: productImages[0],
           duration: settings.duration || 5,
           aspectRatio: settings.aspectRatio || '9:16',
-          estimatedCost: videoResult.estimatedCost,
+          estimatedCost: typeof videoResult === 'object' ? videoResult.estimatedCost : undefined,
           status: 'COMPLETED',
         },
       },
