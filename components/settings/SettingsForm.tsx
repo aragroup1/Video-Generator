@@ -71,7 +71,6 @@ export default function SettingsForm({ project }: SettingsFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Project Settings */}
       <Card>
         <CardHeader>
           <CardTitle>Project Settings</CardTitle>
@@ -89,7 +88,6 @@ export default function SettingsForm({ project }: SettingsFormProps) {
         </CardContent>
       </Card>
 
-      {/* Shopify Integration */}
       <Card>
         <CardHeader>
           <CardTitle>Shopify Integration</CardTitle>
@@ -117,7 +115,6 @@ export default function SettingsForm({ project }: SettingsFormProps) {
         </CardContent>
       </Card>
 
-      {/* AI Provider API Keys */}
       <Card>
         <CardHeader>
           <CardTitle>AI Provider API Keys</CardTitle>
@@ -133,15 +130,7 @@ export default function SettingsForm({ project }: SettingsFormProps) {
               placeholder="r8_..."
             />
             <p className="text-xs text-gray-500 mt-1">
-              Get your API key from{' '}
-              
-                href="https://replicate.com/account/api-tokens"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-purple-600 hover:underline"
-              >
-                replicate.com
-              </a>
+              Get your API key from replicate.com
             </p>
           </div>
 
