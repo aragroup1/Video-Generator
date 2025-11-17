@@ -102,12 +102,16 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
     });
 
 // Create video record
+    const videoUrl = typeof videoResult === 'string' 
+      ? videoResult 
+      : (videoResult as any).videoUrl || (videoResult as any).url || '';
+    
     const video = await prisma.video.create({
       data: {
         projectId,
         productId,
         videoType: job.jobType,
-        fileUrl: typeof videoResult === 'string' ? videoResult : (videoResult.videoUrl || videoResult.url || ''),
+        fileUrl: videoUrl,
         metadata: {
           provider: job.provider,
           settings,
@@ -115,7 +119,7 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
           thumbnailUrl: productImages[0],
           duration: settings.duration || 5,
           aspectRatio: settings.aspectRatio || '9:16',
-          estimatedCost: typeof videoResult === 'object' ? videoResult.estimatedCost : undefined,
+          estimatedCost: typeof videoResult === 'object' ? (videoResult as any).estimatedCost : undefined,
           status: 'COMPLETED',
         },
       },
