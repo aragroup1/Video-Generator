@@ -101,12 +101,11 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
       data: { progress: 80 },
     });
 
-    // Create video record
+// Create video record
     const video = await prisma.video.create({
       data: {
         projectId,
         productId,
-        title: `${job.product.title} - ${job.jobType}`,
         url: videoUrl,
         thumbnailUrl: productImages[0],
         duration: settings.duration || 5,
@@ -116,6 +115,7 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
           provider: job.provider,
           jobType: job.jobType,
           settings,
+          productTitle: job.product.title,
         },
       },
     });
