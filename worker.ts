@@ -106,9 +106,9 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
       data: {
         projectId,
         productId,
-        videoUrl: videoUrl,
         status: 'COMPLETED',
         metadata: {
+          videoUrl: videoUrl,
           provider: job.provider,
           jobType: job.jobType,
           settings,
