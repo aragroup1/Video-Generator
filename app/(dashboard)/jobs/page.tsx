@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 
+import { Suspense } from 'react';
 import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import JobsTable from '@/components/jobs/JobsTable';
@@ -51,8 +52,13 @@ export default async function JobsPage() {
         </div>
       </div>
 
-      <JobsStats stats={stats} />
-      <JobsTable initialJobs={jobs} />
+      <Suspense fallback={<div>Loading stats...</div>}>
+        <JobsStats stats={stats} />
+      </Suspense>
+
+      <Suspense fallback={<div>Loading jobs...</div>}>
+        <JobsTable initialJobs={jobs} />
+      </Suspense>
     </div>
   );
 }
