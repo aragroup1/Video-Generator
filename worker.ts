@@ -106,16 +106,16 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
       data: {
         projectId,
         productId,
-        url: videoUrl,
-        thumbnailUrl: productImages[0],
-        duration: settings.duration || 5,
-        resolution: settings.aspectRatio || '9:16',
+        videoUrl: videoUrl,
         status: 'COMPLETED',
         metadata: {
           provider: job.provider,
           jobType: job.jobType,
           settings,
           productTitle: job.product.title,
+          thumbnailUrl: productImages[0],
+          duration: settings.duration || 5,
+          aspectRatio: settings.aspectRatio || '9:16',
         },
       },
     });
