@@ -4,28 +4,29 @@ import { requireAuth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import SettingsForm from '@/components/settings/SettingsForm';
 
+async function getDefaultProject(userId: string) {
+  const project = await prisma.project.findFirst({
+    where: { userId },
+    orderBy: { createdAt: 'asc' },
+  });
+  return project;
+}
+
 export default async function SettingsPage() {
   const user = await requireAuth();
+  const project = await getDefaultProject(user.id);
 
-  const projects = await prisma.project.findMany({
-    where: { userId: user.id },
-    orderBy: {
-      createdAt: 'asc',
-    },
-  });
+  if (!project) {
+    // Create default project if none exists
+    const newProject = await prisma.project.create({
+      data: {
+        userId: user.id,
+        name: 'Default Project',
+      },
+    });
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-2">Configure your API keys and integrations</p>
-      </div>
+    return <SettingsForm project={newProject} />;
+  }
 
-      <div className="grid gap-6">
-        {projects.map((project) => (
-          <SettingsForm key={project.id} project={project} />
-        ))}
-      </div>
-    </div>
-  );
+  return <SettingsForm project={project} />;
 }
