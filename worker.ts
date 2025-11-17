@@ -125,13 +125,12 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
       },
     });
 
-    // Mark job as completed
+// Mark job as completed
     await prisma.videoJob.update({
       where: { id: jobId },
       data: {
         status: JobStatus.COMPLETED,
         progress: 100,
-        videoId: video.id,
         completedAt: new Date(),
       },
     });
