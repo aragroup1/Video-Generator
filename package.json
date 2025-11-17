@@ -60,3 +60,15 @@
     "postcss": "8.4.32"
   }
 }
+
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "worker": "node worker.js",
+    "lint": "next lint",
+    "prebuild": "npm run clean",
+    "clean": "rm -rf .next/standalone .next/static .next/server || true"
+  }
+}
