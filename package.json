@@ -6,12 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "worker": "node worker.js",
+    "worker": "npx tsx worker.ts",
     "lint": "next lint",
     "prebuild": "npm run clean",
     "clean": "rm -rf .next/standalone .next/static .next/server || true"
   },
-  {
   "dependencies": {
     "@aws-sdk/client-s3": "^3.490.0",
     "@aws-sdk/s3-request-presigner": "^3.490.0",
@@ -40,8 +39,7 @@
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.7.0",
     "zod": "^3.22.4"
-  }
-},
+  },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
