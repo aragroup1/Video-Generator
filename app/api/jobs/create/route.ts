@@ -79,17 +79,19 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Try to add to queue
+    // Add to Redis queue with correct structure
     try {
       await addVideoJob({
-        jobId: videoJob.id,
+        jobId: videoJob.id,  // This is the database job ID
         productId: data.productId,
         projectId: data.projectId,
         settings: data.settings,
       });
+
+      console.log('✅ Job queued:', videoJob.id);
     } catch (queueError: any) {
-      console.warn('Failed to add to queue:', queueError.message);
-      // Job is still created in DB, just not queued yet
+      console.warn('⚠️ Failed to queue job:', queueError.message);
+      // Job is still created in DB, just not queued
     }
 
     return NextResponse.json({
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
       message: 'Job created successfully.',
     });
   } catch (error: any) {
-    console.error('Create job error:', error);
+    console.error('❌ Create job error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to create job' },
       { status: 400 }
