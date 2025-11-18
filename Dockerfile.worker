@@ -1,0 +1,17 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install dependencies
+RUN npm install
+RUN npx prisma generate
+
+# Copy application code
+COPY . .
+
+# Start worker
+CMD ["node", "worker.js"]
