@@ -2,10 +2,10 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm install && npx prisma generate && npm run build"
+    "buildCommand": "npm install && npx prisma generate && if [ \"$IS_WORKER\" != \"true\" ]; then npm run build; fi"
   },
   "deploy": {
-    "startCommand": "npx prisma db push && npm start",
+    "startCommand": "if [ \"$IS_WORKER\" = \"true\" ]; then node worker.js; else npx prisma db push && npm start; fi",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
     "healthcheckPath": "/api/health",
