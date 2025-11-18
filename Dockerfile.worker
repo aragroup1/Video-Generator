@@ -5,13 +5,19 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
+COPY tsconfig.json ./
 
 # Install dependencies
 RUN npm install
+
+# Set environment variable to skip checksum
+ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+
+# Generate Prisma Client
 RUN npx prisma generate
 
 # Copy application code
 COPY . .
 
-# Start worker
-CMD ["node", "worker.js"]
+# Start worker using tsx to run TypeScript
+CMD ["npx", "tsx", "worker.ts"]
