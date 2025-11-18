@@ -34,13 +34,13 @@ export default async function JobsPage() {
     take: 100,
   });
 
-  // Calculate stats
+  // Calculate stats with explicit types
   const stats = {
     total: jobs.length,
-    pending: jobs.filter(j => j.status === 'PENDING').length,
-    processing: jobs.filter(j => j.status === 'PROCESSING').length,
-    completed: jobs.filter(j => j.status === 'COMPLETED').length,
-    failed: jobs.filter(j => j.status === 'FAILED').length,
+    pending: jobs.filter((j: any) => j.status === 'PENDING').length,
+    processing: jobs.filter((j: any) => j.status === 'PROCESSING').length,
+    completed: jobs.filter((j: any) => j.status === 'COMPLETED').length,
+    failed: jobs.filter((j: any) => j.status === 'FAILED').length,
   };
 
   return (
