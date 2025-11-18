@@ -10,7 +10,7 @@ import {
   CheckCircle, AlertCircle, Clock, Sparkles, Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { VideoStyle, BudgetLevel } from '@/lib/ai-providers/replicate';
+import { VideoStyle, BudgetLevel } from '@/lib/ai-providers/types';
 
 interface Product {
   id: string;
