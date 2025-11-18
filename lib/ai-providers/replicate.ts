@@ -12,59 +12,54 @@ export class ReplicateProvider implements AIProvider {
     });
   }
 
-  private selectModel(style: VideoStyle, budget: BudgetLevel): string {
-    // Using Stable Video Diffusion for all styles
-    // You can expand this to use different models based on style
-    const models: Record<string, Record<BudgetLevel, string>> = {
-      '360_rotation': {
-        economy: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        standard: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        premium: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-      },
-      'lifestyle_casual': {
-        economy: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        standard: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        premium: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-      },
-      'lifestyle_premium': {
-        economy: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        standard: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        premium: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-      },
-      'ad_testimonial': {
-        economy: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        standard: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        premium: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-      },
-      'ad_feature_focus': {
-        economy: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        standard: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        premium: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-      },
-      'ad_problem_solution': {
-        economy: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        standard: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        premium: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-      },
-      'how_to_use': {
-        economy: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        standard: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        premium: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-      },
-      'influencer_showcase': {
-        economy: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        standard: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        premium: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-      },
-      'default': {
-        economy: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        standard: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-        premium: 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438',
-      },
+  private generatePrompt(
+    style: VideoStyle,
+    productTitle: string,
+    productDescription: string,
+    budget: BudgetLevel
+  ): string {
+    // Generate intelligent prompts based on style
+    const prompts: Record<VideoStyle, string> = {
+      '360_rotation': `Professional 360 degree rotating view of ${productTitle}. Clean white studio background, smooth continuous rotation, product photography style, high quality commercial video, perfect lighting.`,
+      
+      'lifestyle_casual': `${productTitle} being used in everyday casual setting. Natural lighting, authentic lifestyle photography, person using the product in their daily routine, relatable and genuine atmosphere, Instagram aesthetic.`,
+      
+      'lifestyle_premium': `${productTitle} showcased in luxurious premium setting. Golden hour lighting, high-end lifestyle photography, elegant and sophisticated atmosphere, aspirational aesthetic, magazine-quality production.`,
+      
+      'ad_testimonial': `Person genuinely excited about ${productTitle}. Authentic testimonial style, direct to camera, positive emotional reaction, relatable setting, trustworthy and honest vibe, user-generated content aesthetic.`,
+      
+      'ad_feature_focus': `Close-up product demonstration of ${productTitle} key features. Professional product video, detailed feature showcase, clear and informative, commercial advertisement style, high production value.`,
+      
+      'ad_problem_solution': `${productTitle} solving a problem. Before and after demonstration, clear problem identification, product as the solution, engaging narrative, commercial advertisement style.`,
+      
+      'how_to_use': `Step-by-step tutorial demonstrating how to use ${productTitle}. Clear instructional style, helpful and informative, easy to follow, educational video format, friendly demonstration.`,
+      
+      'influencer_showcase': `Influencer-style first-person POV showcasing ${productTitle}. Authentic and casual vibe, ring light aesthetic, talking to camera, genuine excitement, social media content style, trendy and engaging.`,
     };
 
-    const styleModels = models[style] || models.default;
-    return styleModels[budget];
+    return prompts[style] || prompts['lifestyle_casual'];
+  }
+
+  private selectModel(budget: BudgetLevel): string {
+    // For now, use Sora 2 for all tiers
+    // You can differentiate later with different settings or models
+    return 'openai/sora-2';
+  }
+
+  private getAspectRatio(style: VideoStyle): string {
+    // Different aspect ratios for different styles
+    const aspectRatios: Record<VideoStyle, string> = {
+      '360_rotation': 'square',
+      'lifestyle_casual': 'landscape',
+      'lifestyle_premium': 'landscape',
+      'ad_testimonial': 'portrait',
+      'ad_feature_focus': 'square',
+      'ad_problem_solution': 'landscape',
+      'how_to_use': 'landscape',
+      'influencer_showcase': 'portrait',
+    };
+
+    return aspectRatios[style] || 'landscape';
   }
 
   async generateVideo(request: VideoGenerationRequest & {
@@ -74,46 +69,60 @@ export class ReplicateProvider implements AIProvider {
     productDescription: string;
   }): Promise<VideoGenerationResponse> {
     try {
-      const model = this.selectModel(request.style, request.budget);
+      const model = this.selectModel(request.budget);
+      const prompt = this.generatePrompt(
+        request.style,
+        request.productTitle,
+        request.productDescription,
+        request.budget
+      );
+      const aspectRatio = this.getAspectRatio(request.style);
 
-      console.log('🎬 Starting Replicate video generation...');
+      console.log('🎬 Starting Sora 2 video generation...');
       console.log('📦 Model:', model);
       console.log('🖼️ Image URL:', request.imageUrl);
+      console.log('📝 Prompt:', prompt);
       console.log('🎨 Style:', request.style);
       console.log('💰 Budget:', request.budget);
+      console.log('📐 Aspect Ratio:', aspectRatio);
 
       const output = await this.client.run(model as any, {
         input: {
-          input_image: request.imageUrl,
-          cond_aug: 0.02,
-          decoding_t: 14,
-          video_length: "14_frames_with_svd",
-          sizing_strategy: "maintain_aspect_ratio",
-          motion_bucket_id: 127,
-          frames_per_second: 6,
+          prompt: prompt,
+          aspect_ratio: aspectRatio,
+          input_reference: request.imageUrl,
         },
       });
 
       console.log('✅ Video generated successfully');
       console.log('📹 Output:', output);
 
-      const videoUrl = Array.isArray(output) ? output[0] : output;
+      // Extract video URL from output
+      let videoUrl: string;
+      if (typeof output === 'object' && output !== null && 'url' in output) {
+        videoUrl = (output as any).url();
+      } else if (Array.isArray(output)) {
+        videoUrl = output[0];
+      } else {
+        videoUrl = output as string;
+      }
 
       return {
-        videoUrl: videoUrl as string,
+        videoUrl: videoUrl,
         estimatedCost: this.calculateCost(request.budget),
       };
     } catch (error: any) {
-      console.error('❌ Replicate generation failed:', error);
+      console.error('❌ Sora 2 generation failed:', error);
       throw new Error(`Failed to generate video: ${error.message}`);
     }
   }
 
   private calculateCost(budget: BudgetLevel): number {
+    // Sora 2 pricing (estimate based on Replicate pricing)
     const costs: Record<BudgetLevel, number> = {
-      economy: 0.03,
-      standard: 0.10,
-      premium: 0.35,
+      economy: 2.50,   // Shorter, lower quality
+      standard: 5.00,  // Standard quality
+      premium: 10.00,  // Highest quality, longer
     };
     return costs[budget];
   }
