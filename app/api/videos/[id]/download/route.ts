@@ -4,10 +4,10 @@ import { getSignedDownloadUrl } from '@/lib/storage/s3';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await context.params;
 
     // Get video with product info
     const video = await prisma.video.findUnique({
