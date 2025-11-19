@@ -1,26 +1,34 @@
-export type VideoStyle = 
-  | '360_rotation'
-  | 'lifestyle_casual'
-  | 'lifestyle_premium'
-  | 'ad_testimonial'
-  | 'ad_feature_focus'
-  | 'ad_problem_solution'
-  | 'how_to_use'
-  | 'influencer_showcase';
+import axios, { AxiosInstance } from 'axios';
+import { AIProvider, VideoGenerationRequest, VideoGenerationResponse } from './types';
 
-export type BudgetLevel = 'economy' | 'standard' | 'premium';
+export class LumaProvider implements AIProvider {
+  private client: AxiosInstance;
+  private apiKey: string;
 
-export interface VideoGenerationRequest {
-  imageUrl: string;
-  prompt?: string;
-  duration?: number;
-}
+  constructor(config: { apiKey: string }) {
+    this.apiKey = config.apiKey;
+    this.client = axios.create({
+      baseURL: 'https://api.lumalabs.ai/v1',
+      headers: {
+        'Authorization': `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+  }
 
-export interface VideoGenerationResponse {
-  videoUrl: string;
-  estimatedCost: number;
-}
+  async generateVideo(request: VideoGenerationRequest): Promise<VideoGenerationResponse> {
+    try {
+      const response = await this.client.post('/generations', {
+        prompt: request.prompt,
+        image_url: request.imageUrl,
+      });
 
-export interface AIProvider {
-  generateVideo(request: VideoGenerationRequest): Promise<VideoGenerationResponse>;
+      return {
+        videoUrl: response.data.video_url,
+        estimatedCost: 0.40,
+      };
+    } catch (error: any) {
+      throw new Error(`Luma generation failed: ${error.message}`);
+    }
+  }
 }
