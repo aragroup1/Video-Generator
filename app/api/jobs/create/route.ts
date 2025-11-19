@@ -17,6 +17,7 @@ const createJobSchema = z.object({
     quality: z.string().optional(),
     style: z.string().optional(),
     budget: z.string().optional(),
+    model: z.string().optional(), // Add model selection
     productTitle: z.string().optional(),
     productDescription: z.string().optional(),
   }),
@@ -79,10 +80,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Add to Redis queue with correct structure
+    // Add to Redis queue with model preference
     try {
       await addVideoJob({
-        jobId: videoJob.id,  // This is the database job ID
+        jobId: videoJob.id,
         productId: data.productId,
         projectId: data.projectId,
         settings: data.settings,
@@ -91,7 +92,6 @@ export async function POST(request: NextRequest) {
       console.log('✅ Job queued:', videoJob.id);
     } catch (queueError: any) {
       console.warn('⚠️ Failed to queue job:', queueError.message);
-      // Job is still created in DB, just not queued
     }
 
     return NextResponse.json({
