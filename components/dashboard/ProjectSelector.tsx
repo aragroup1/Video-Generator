@@ -1,56 +1,45 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Select } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 
 interface Project {
   id: string;
   name: string;
-  _count: {
-    products: number;
-    videos: number;
-    videoJobs: number;
-  };
 }
 
 interface ProjectSelectorProps {
   projects: Project[];
+  defaultProjectId: string;
 }
 
-export default function ProjectSelector({ projects }: ProjectSelectorProps) {
-  const router = useRouter();
-  const [selectedProject, setSelectedProject] = useState(projects[0]?.id || '');
+export default function ProjectSelector({ projects, defaultProjectId }: ProjectSelectorProps) {
+  const [selectedProject, setSelectedProject] = useState(defaultProjectId);
 
-  const handleProjectChange = (projectId: string) => {
-    setSelectedProject(projectId);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('current-project', projectId);
-    }
-    router.refresh();
+  const handleProjectChange = (value: string) => {
+    setSelectedProject(value);
+    // You can add logic here to update the project context or make API calls
+    console.log('Selected project:', value);
   };
 
+  if (projects.length <= 1) {
+    return null; // Don't show selector if only one project
+  }
+
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center gap-2">
+      <label className="text-sm font-medium text-gray-700">Project:</label>
       <Select
         value={selectedProject}
-        onChange={(e) => handleProjectChange(e.target.value)}
-        className="min-w-[200px]"
+        onValueChange={handleProjectChange}
       >
+        <option value="">Select a project</option>
         {projects.map((project) => (
           <option key={project.id} value={project.id}>
-            {project.name} ({project._count.products} products)
+            {project.name}
           </option>
         ))}
       </Select>
-      <Button
-        onClick={() => router.push('/dashboard/projects/new')}
-        size="icon"
-      >
-        <Plus size={16} />
-      </Button>
     </div>
   );
 }
