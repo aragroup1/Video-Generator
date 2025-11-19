@@ -80,7 +80,6 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
         projectId,
         productId,
         jobId,
-        provider: AIProvider.REPLICATE,
         videoType: VideoType.AI_GENERATED,
         videoUrl: result.videoUrl,
         settings: settings as any,
