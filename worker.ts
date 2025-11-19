@@ -2,7 +2,9 @@ import { Worker, Job } from 'bullmq';
 import prisma from './lib/prisma';
 import redis, { getRedisConnection } from './lib/redis';
 import { ReplicateProvider } from './lib/ai-providers/replicate';
+import { uploadVideoToS3 } from './lib/storage/s3';
 import { JobStatus, AIProvider, VideoType } from '@prisma/client';
+import axios from 'axios';
 
 interface VideoJobData {
   jobId: string;
@@ -11,6 +13,7 @@ interface VideoJobData {
   settings: {
     style: string;
     budget: string;
+    model?: string;
     productTitle: string;
     productDescription: string;
     prompt?: string;
@@ -22,7 +25,7 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
   const { jobId, productId, projectId, settings } = job.data;
 
   console.log(`🔄 Processing job ${job.id}: generate-video`);
-  console.log('📦 Job data:', { jobId, productId, projectId });
+  console.log('📦 Job data:', { jobId, productId, projectId, model: settings.model });
 
   try {
     // Get job from database
@@ -62,7 +65,7 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
     // Initialize provider
     const provider = new ReplicateProvider({ apiKey });
 
-    // Generate video
+    // Generate video with model preference
     console.log('🎬 Starting video generation...');
     const result = await provider.generateVideo({
       imageUrl: images[0],
@@ -70,19 +73,48 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
       budget: settings.budget as any,
       productTitle: settings.productTitle,
       productDescription: settings.productDescription || '',
+      preferredModel: settings.model as any, // Pass model preference
     });
 
     console.log('✅ Video generated:', result.videoUrl);
 
-    // Create video record
+    // Download video from Replicate
+    console.log('📥 Downloading video from Replicate...');
+    const videoResponse = await axios.get(result.videoUrl, {
+      responseType: 'arraybuffer',
+      timeout: 300000, // 5 minute timeout
+    });
+
+    const videoBuffer = Buffer.from(videoResponse.data);
+    console.log(`📦 Video downloaded: ${(videoBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+
+    // Upload to S3
+    console.log('☁️ Uploading to AWS S3...');
+    const s3Url = await uploadVideoToS3({
+      buffer: videoBuffer,
+      productId,
+      projectId,
+      jobId,
+      contentType: videoResponse.headers['content-type'] || 'video/mp4',
+    });
+
+    console.log('✅ Video uploaded to S3:', s3Url);
+
+    // Create video record with S3 URL
     const video = await prisma.video.create({
       data: {
         projectId,
         productId,
         jobId,
         videoType: VideoType.PRODUCT_DEMO,
-        fileUrl: result.videoUrl,
-        metadata: settings as any,
+        fileUrl: s3Url, // Use S3 URL instead of Replicate URL
+        fileSize: BigInt(videoBuffer.length),
+        metadata: {
+          ...settings,
+          originalUrl: result.videoUrl,
+          model: settings.model || 'auto',
+          uploadedToS3: true,
+        } as any,
       },
     });
 
@@ -92,13 +124,13 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
       data: {
         status: JobStatus.COMPLETED,
         completedAt: new Date(),
-        resultUrl: result.videoUrl,
+        resultUrl: s3Url, // Store S3 URL in job
         costCredits: Math.round(result.estimatedCost * 100),
       },
     });
 
     console.log(`✅ Job ${jobId} completed successfully`);
-    return { success: true, videoId: video.id };
+    return { success: true, videoId: video.id, s3Url };
   } catch (error: any) {
     console.error(`❌ Job ${jobId} failed:`, error.message);
 
@@ -140,7 +172,7 @@ async function startWorker() {
     },
     {
       connection,
-      concurrency: 3,
+      concurrency: 2, // Reduced to 2 for S3 uploads
       limiter: {
         max: 10,
         duration: 60000,
