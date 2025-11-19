@@ -8,12 +8,30 @@ import { Badge } from '@/components/ui/badge';
 import { VideoStyle, BudgetLevel } from '@/lib/ai-providers/types';
 import toast from 'react-hot-toast';
 
-// ... other imports and interfaces ...
+interface Product {
+  id: string;
+  title: string;
+  description: string | null;
+  images: any;
+}
+
+interface BulkVideoGeneratorProps {
+  products: Product[];
+  projectId: string;
+}
+
+interface GenerationJob {
+  id: string;
+  productId: string;
+  productTitle: string;
+  style: VideoStyle;
+  status: 'pending' | 'queued' | 'processing' | 'completed' | 'failed';
+}
 
 export default function BulkVideoGenerator({ products, projectId }: BulkVideoGeneratorProps) {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [selectedStyles, setSelectedStyles] = useState<VideoStyle[]>([]);
-  const [budget, setBudget] = useState<BudgetLevel>('standard'); // Use string literal instead
+  const [budget, setBudget] = useState<BudgetLevel>('standard');
   const [isGenerating, setIsGenerating] = useState(false);
   const [jobs, setJobs] = useState<GenerationJob[]>([]);
   const [totalCost, setTotalCost] = useState(0);
