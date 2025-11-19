@@ -34,7 +34,7 @@ export async function uploadVideoToS3(options: UploadVideoOptions): Promise<stri
       Key: filename,
       Body: buffer,
       ContentType: contentType,
-      ACL: 'public-read', // Make video publicly accessible
+      ACL: 'public-read',
     });
 
     await s3Client.send(command);
@@ -49,13 +49,3 @@ export async function uploadVideoToS3(options: UploadVideoOptions): Promise<stri
     throw new Error(`Failed to upload to S3: ${error.message}`);
   }
 }
-```
-
-## **5. Add AWS Environment Variables to Railway:**
-
-In both **Main App** and **Worker** services, add:
-```
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=us-east-1
-AWS_S3_BUCKET=your-bucket-name
