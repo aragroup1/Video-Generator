@@ -1,6 +1,8 @@
 import Replicate from 'replicate';
 import { AIProvider, VideoGenerationRequest, VideoGenerationResponse, VideoStyle, BudgetLevel } from './types';
 
+type AIModel = 'sora-2' | 'veo-3.1';
+
 export class ReplicateProvider implements AIProvider {
   private client: Replicate;
   private apiKey: string;
@@ -12,42 +14,46 @@ export class ReplicateProvider implements AIProvider {
     });
   }
 
+  private selectModel(budget: BudgetLevel): { model: string; type: AIModel } {
+    // Use Veo 3.1 for economy/standard (cheaper, still high quality)
+    // Use Sora 2 for premium (most expensive, best quality)
+    const modelMap: Record<BudgetLevel, { model: string; type: AIModel }> = {
+      economy: { model: 'google/veo-3.1', type: 'veo-3.1' },
+      standard: { model: 'google/veo-3.1', type: 'veo-3.1' },
+      premium: { model: 'openai/sora-2', type: 'sora-2' },
+    };
+
+    return modelMap[budget];
+  }
+
   private generatePrompt(
     style: VideoStyle,
     productTitle: string,
     productDescription: string,
     budget: BudgetLevel
   ): string {
-    // Generate intelligent prompts based on style
     const prompts: Record<VideoStyle, string> = {
-      '360_rotation': `Professional 360 degree rotating view of ${productTitle}. Clean white studio background, smooth continuous rotation, product photography style, high quality commercial video, perfect lighting.`,
+      '360_rotation': `Professional 360 degree smooth rotation of ${productTitle}. Clean white studio background, seamless continuous rotation showing all angles, premium product photography style, studio lighting, commercial video quality. The product rotates smoothly from front to back showing every detail.`,
       
-      'lifestyle_casual': `${productTitle} being used in everyday casual setting. Natural lighting, authentic lifestyle photography, person using the product in their daily routine, relatable and genuine atmosphere, Instagram aesthetic.`,
+      'lifestyle_casual': `${productTitle} being used naturally in everyday casual setting. Natural daylight, authentic lifestyle moment, person casually using the product in their daily routine, relatable and genuine atmosphere, warm and inviting mood, Instagram lifestyle aesthetic.`,
       
-      'lifestyle_premium': `${productTitle} showcased in luxurious premium setting. Golden hour lighting, high-end lifestyle photography, elegant and sophisticated atmosphere, aspirational aesthetic, magazine-quality production.`,
+      'lifestyle_premium': `${productTitle} elegantly showcased in luxurious premium setting. Golden hour lighting, high-end sophisticated lifestyle, beautiful upscale environment, aspirational and elegant atmosphere, magazine editorial quality, refined and tasteful presentation.`,
       
-      'ad_testimonial': `Person genuinely excited about ${productTitle}. Authentic testimonial style, direct to camera, positive emotional reaction, relatable setting, trustworthy and honest vibe, user-generated content aesthetic.`,
+      'ad_testimonial': `Person authentically sharing their positive experience with ${productTitle}. Natural setting, genuine emotion and excitement, speaking directly to viewer, trustworthy and relatable presentation, warm and friendly atmosphere, user testimonial style.`,
       
-      'ad_feature_focus': `Close-up product demonstration of ${productTitle} key features. Professional product video, detailed feature showcase, clear and informative, commercial advertisement style, high production value.`,
+      'ad_feature_focus': `Professional close-up demonstration of ${productTitle} showcasing key features and details. Clean commercial presentation, clear feature highlights, detailed product view, informative and engaging, high production value, advertisement quality.`,
       
-      'ad_problem_solution': `${productTitle} solving a problem. Before and after demonstration, clear problem identification, product as the solution, engaging narrative, commercial advertisement style.`,
+      'ad_problem_solution': `Visual story showing ${productTitle} solving a problem. Clear before and after sequence, problem identification to solution, engaging narrative flow, relatable scenario, commercial advertisement style, satisfying resolution.`,
       
-      'how_to_use': `Step-by-step tutorial demonstrating how to use ${productTitle}. Clear instructional style, helpful and informative, easy to follow, educational video format, friendly demonstration.`,
+      'how_to_use': `Clear step-by-step tutorial demonstrating ${productTitle} in use. Easy to follow instructions, helpful and informative presentation, hands demonstrating usage, educational video format, friendly instructional style, good lighting and clarity.`,
       
-      'influencer_showcase': `Influencer-style first-person POV showcasing ${productTitle}. Authentic and casual vibe, ring light aesthetic, talking to camera, genuine excitement, social media content style, trendy and engaging.`,
+      'influencer_showcase': `Authentic influencer-style POV showcasing ${productTitle}. First-person perspective, natural and casual vibe, ring light aesthetic, speaking to camera with genuine enthusiasm, social media content style, trendy and engaging, relatable presentation.`,
     };
 
     return prompts[style] || prompts['lifestyle_casual'];
   }
 
-  private selectModel(budget: BudgetLevel): string {
-    // For now, use Sora 2 for all tiers
-    // You can differentiate later with different settings or models
-    return 'openai/sora-2';
-  }
-
   private getAspectRatio(style: VideoStyle): string {
-    // Different aspect ratios for different styles
     const aspectRatios: Record<VideoStyle, string> = {
       '360_rotation': 'square',
       'lifestyle_casual': 'landscape',
@@ -69,7 +75,7 @@ export class ReplicateProvider implements AIProvider {
     productDescription: string;
   }): Promise<VideoGenerationResponse> {
     try {
-      const model = this.selectModel(request.budget);
+      const { model, type } = this.selectModel(request.budget);
       const prompt = this.generatePrompt(
         request.style,
         request.productTitle,
@@ -78,21 +84,34 @@ export class ReplicateProvider implements AIProvider {
       );
       const aspectRatio = this.getAspectRatio(request.style);
 
-      console.log('🎬 Starting Sora 2 video generation...');
-      console.log('📦 Model:', model);
+      console.log('🎬 Starting AI video generation...');
+      console.log('📦 Model:', model, `(${type})`);
       console.log('🖼️ Image URL:', request.imageUrl);
       console.log('📝 Prompt:', prompt);
       console.log('🎨 Style:', request.style);
       console.log('💰 Budget:', request.budget);
       console.log('📐 Aspect Ratio:', aspectRatio);
 
-      const output = await this.client.run(model as any, {
-        input: {
-          prompt: prompt,
-          aspect_ratio: aspectRatio,
-          input_reference: request.imageUrl,
-        },
-      });
+      let output;
+
+      if (type === 'veo-3.1') {
+        // Veo 3.1 uses reference_images
+        output = await this.client.run(model as any, {
+          input: {
+            prompt: prompt,
+            reference_images: [request.imageUrl],
+          },
+        });
+      } else if (type === 'sora-2') {
+        // Sora 2 uses input_reference
+        output = await this.client.run(model as any, {
+          input: {
+            prompt: prompt,
+            aspect_ratio: aspectRatio,
+            input_reference: request.imageUrl,
+          },
+        });
+      }
 
       console.log('✅ Video generated successfully');
       console.log('📹 Output:', output);
@@ -109,21 +128,29 @@ export class ReplicateProvider implements AIProvider {
 
       return {
         videoUrl: videoUrl,
-        estimatedCost: this.calculateCost(request.budget),
+        estimatedCost: this.calculateCost(request.budget, type),
       };
     } catch (error: any) {
-      console.error('❌ Sora 2 generation failed:', error);
+      console.error('❌ Video generation failed:', error);
       throw new Error(`Failed to generate video: ${error.message}`);
     }
   }
 
-  private calculateCost(budget: BudgetLevel): number {
-    // Sora 2 pricing (estimate based on Replicate pricing)
-    const costs: Record<BudgetLevel, number> = {
-      economy: 2.50,   // Shorter, lower quality
-      standard: 5.00,  // Standard quality
-      premium: 10.00,  // Highest quality, longer
+  private calculateCost(budget: BudgetLevel, model: AIModel): number {
+    // Pricing based on model and budget
+    const costs: Record<AIModel, Record<BudgetLevel, number>> = {
+      'veo-3.1': {
+        economy: 1.50,   // Google Veo is cheaper
+        standard: 3.00,
+        premium: 5.00,
+      },
+      'sora-2': {
+        economy: 3.00,   // Sora 2 is more expensive
+        standard: 6.00,
+        premium: 10.00,
+      },
     };
-    return costs[budget];
+
+    return costs[model][budget];
   }
 }
