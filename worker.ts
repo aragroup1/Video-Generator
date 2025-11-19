@@ -80,8 +80,8 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
         projectId,
         productId,
         jobId,
-        videoType: VideoType.PRODUCT_DEMO, // Use PRODUCT_DEMO instead of AI_GENERATED
-        videoUrl: result.videoUrl,
+        videoType: VideoType.PRODUCT_DEMO,
+        url: result.videoUrl, // Changed from videoUrl to url
         settings: settings as any,
         cost: result.estimatedCost,
       },
