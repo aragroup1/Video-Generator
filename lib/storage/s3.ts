@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
@@ -24,7 +25,6 @@ export async function uploadVideoToS3(options: UploadVideoOptions): Promise<stri
     throw new Error('AWS_S3_BUCKET environment variable is not set');
   }
 
-  // Generate unique filename
   const timestamp = Date.now();
   const filename = `videos/${projectId}/${productId}/${jobId}_${timestamp}.mp4`;
 
@@ -39,7 +39,6 @@ export async function uploadVideoToS3(options: UploadVideoOptions): Promise<stri
 
     await s3Client.send(command);
 
-    // Return public URL
     const s3Url = `https://${bucketName}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${filename}`;
     
     console.log('✅ Video uploaded to S3:', s3Url);
@@ -47,5 +46,36 @@ export async function uploadVideoToS3(options: UploadVideoOptions): Promise<stri
   } catch (error: any) {
     console.error('❌ S3 upload failed:', error);
     throw new Error(`Failed to upload to S3: ${error.message}`);
+  }
+}
+
+export async function getSignedDownloadUrl(fileUrl: string): Promise<string> {
+  try {
+    const bucketName = process.env.AWS_S3_BUCKET;
+    if (!bucketName) {
+      throw new Error('AWS_S3_BUCKET environment variable is not set');
+    }
+
+    // Extract key from S3 URL
+    const urlParts = fileUrl.split('.amazonaws.com/');
+    if (urlParts.length !== 2) {
+      // If not an S3 URL, return as-is
+      return fileUrl;
+    }
+
+    const key = urlParts[1];
+
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+
+    // Generate presigned URL valid for 1 hour
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    return signedUrl;
+  } catch (error: any) {
+    console.error('❌ Failed to generate signed URL:', error);
+    // Return original URL as fallback
+    return fileUrl;
   }
 }
