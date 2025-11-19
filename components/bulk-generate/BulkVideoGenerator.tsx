@@ -3,76 +3,56 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import {
-  Package, Video, DollarSign, Zap, Flag, TrendingUp,
-  CheckCircle, AlertCircle, Clock, Sparkles, Eye
-} from 'lucide-react';
-import toast from 'react-hot-toast';
 import { VideoStyle, BudgetLevel } from '@/lib/ai-providers/types';
+import toast from 'react-hot-toast';
 
-interface Product {
-  id: string;
-  title: string;
-  description: string;
-  images: string[];
-  price: number;
-  isFlagged: boolean;
-  priority: number;
-  salesCount: number;
-  viewCount: number;
-  _count: {
-    videos: number;
-  };
-}
+// ... other imports and interfaces ...
 
-interface GenerationJob {
-  productId: string;
-  productTitle: string;
-  style: VideoStyle;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  progress: number;
-  cost?: number;
-  error?: string;
-}
-
-interface BulkVideoGeneratorProps {
-  projectId: string;
-}
-
-export default function BulkVideoGenerator({ projectId }: BulkVideoGeneratorProps) {
-  const [products, setProducts] = useState<Product[]>([]);
+export default function BulkVideoGenerator({ products, projectId }: BulkVideoGeneratorProps) {
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [selectedStyles, setSelectedStyles] = useState<VideoStyle[]>([]);
-  const [budget, setBudget] = useState<BudgetLevel>(BudgetLevel.STANDARD);
+  const [budget, setBudget] = useState<BudgetLevel>('standard'); // Use string literal instead
   const [isGenerating, setIsGenerating] = useState(false);
   const [jobs, setJobs] = useState<GenerationJob[]>([]);
   const [totalCost, setTotalCost] = useState(0);
 
-  // Load prioritized products
-  useEffect(() => {
-    loadProducts();
-  }, [projectId]);
+  // Video styles options
+  const videoStyles: { value: VideoStyle; label: string; description: string }[] = [
+    { value: '360_rotation', label: '360° Rotation', description: 'Smooth product rotation' },
+    { value: 'lifestyle_casual', label: 'Lifestyle Casual', description: 'Everyday usage scenes' },
+    { value: 'lifestyle_premium', label: 'Lifestyle Premium', description: 'Luxury lifestyle shots' },
+    { value: 'ad_testimonial', label: 'Testimonial', description: 'Customer reviews style' },
+    { value: 'ad_feature_focus', label: 'Feature Focus', description: 'Highlight key features' },
+    { value: 'ad_problem_solution', label: 'Problem-Solution', description: 'Before/after format' },
+    { value: 'how_to_use', label: 'How-To', description: 'Tutorial demonstration' },
+    { value: 'influencer_showcase', label: 'Influencer', description: 'Social media POV' },
+  ];
 
-  // Update cost estimate when selection changes
+  // Budget options
+  const budgetOptions: { value: BudgetLevel; label: string; cost: string }[] = [
+    { value: 'economy', label: 'Economy', cost: '$1.00-3.00' },
+    { value: 'standard', label: 'Standard', cost: '$2.50-6.00' },
+    { value: 'premium', label: 'Premium', cost: '$5.00-12.00' },
+  ];
+
+  // Calculate total estimated cost
   useEffect(() => {
-    updateCostEstimate(selectedProducts, selectedStyles);
+    const cost = selectedProducts.size * selectedStyles.length * getCostForBudget(budget);
+    setTotalCost(cost);
   }, [selectedProducts, selectedStyles, budget]);
 
-  const loadProducts = async () => {
-    try {
-      const response = await fetch(`/api/products?projectId=${projectId}&prioritized=true`);
-      if (!response.ok) throw new Error('Failed to load products');
-      const data = await response.json();
-      setProducts(data);
-    } catch (error) {
-      toast.error('Failed to load products');
-      console.error(error);
-    }
+  const getCostForBudget = (budgetLevel: BudgetLevel): number => {
+    const costs: Record<BudgetLevel, number> = {
+      economy: 1.50,
+      standard: 4.00,
+      premium: 8.00,
+    };
+    return costs[budgetLevel];
   };
 
-  const handleProductSelect = (productId: string) => {
+  const handleProductToggle = (productId: string) => {
     const newSelected = new Set(selectedProducts);
     if (newSelected.has(productId)) {
       newSelected.delete(productId);
@@ -83,297 +63,99 @@ export default function BulkVideoGenerator({ projectId }: BulkVideoGeneratorProp
   };
 
   const handleStyleToggle = (style: VideoStyle) => {
-    const newStyles = selectedStyles.includes(style)
-      ? selectedStyles.filter(s => s !== style)
-      : [...selectedStyles, style];
-    setSelectedStyles(newStyles);
+    setSelectedStyles(prev =>
+      prev.includes(style)
+        ? prev.filter(s => s !== style)
+        : [...prev, style]
+    );
   };
 
-  const updateCostEstimate = async (products: Set<string>, styles: VideoStyle[]) => {
-    if (products.size === 0 || styles.length === 0) {
-      setTotalCost(0);
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/videos/estimate-cost', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productCount: products.size,
-          styles,
-          budget,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to estimate cost');
-
-      const { estimatedCost } = await response.json();
-      setTotalCost(estimatedCost);
-    } catch (error) {
-      console.error('Cost estimation error:', error);
-    }
-  };
-
-  const startBulkGeneration = async () => {
-    if (selectedProducts.size === 0) {
-      toast.error('Please select at least one product');
-      return;
-    }
-
-    if (selectedStyles.length === 0) {
-      toast.error('Please select at least one video style');
+  const handleGenerate = async () => {
+    if (selectedProducts.size === 0 || selectedStyles.length === 0) {
+      toast.error('Please select at least one product and one video style');
       return;
     }
 
     setIsGenerating(true);
     const newJobs: GenerationJob[] = [];
 
-    // Create jobs for each product-style combination
-    selectedProducts.forEach(productId => {
-      const product = products.find(p => p.id === productId)!;
-      selectedStyles.forEach(style => {
-        newJobs.push({
-          productId,
-          productTitle: product.title,
-          style,
-          status: 'pending',
-          progress: 0,
-        });
-      });
-    });
-
-    setJobs(newJobs);
-
-    // Process jobs in batches
-    const batchSize = 3;
-    for (let i = 0; i < newJobs.length; i += batchSize) {
-      const batch = newJobs.slice(i, i + batchSize);
-      await Promise.all(batch.map(job => processJob(job)));
-    }
-
-    setIsGenerating(false);
-    toast.success('Bulk generation completed!');
-  };
-
-  const processJob = async (job: GenerationJob) => {
     try {
-      // Update job status
-      updateJobStatus(job.productId, job.style, 'processing', 10);
+      for (const productId of Array.from(selectedProducts)) {
+        for (const style of selectedStyles) {
+          const product = products.find(p => p.id === productId);
+          if (!product) continue;
 
-      const product = products.find(p => p.id === job.productId)!;
-      
-      const response = await fetch('/api/jobs/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId,
-          productId: job.productId,
-          videoType: mapStyleToVideoType(job.style),
-          provider: 'REPLICATE',
-          settings: {
-            style: job.style,
-            budget,
+          const job: GenerationJob = {
+            id: `${productId}-${style}`,
+            productId,
             productTitle: product.title,
-            productDescription: product.description,
-            duration: 5,
-            aspectRatio: '9:16', // Mobile optimized
-          },
-        }),
-      });
+            style,
+            status: 'pending',
+          };
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create job');
-      }
+          newJobs.push(job);
+          setJobs(prev => [...prev, job]);
 
-      const data = await response.json();
-      
-      // Poll for completion
-      await pollJobStatus(data.id, job);
-      
-      updateJobStatus(job.productId, job.style, 'completed', 100, 0.05);
-    } catch (error: any) {
-      console.error('Job processing error:', error);
-      updateJobStatus(job.productId, job.style, 'failed', 0, 0, error.message);
-    }
-  };
+          // Create the job via API
+          const response = await fetch('/api/jobs/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              projectId,
+              productId,
+              videoType: 'AI_GENERATED',
+              provider: 'REPLICATE',
+              settings: {
+                style,
+                budget,
+                productTitle: product.title,
+                productDescription: product.description,
+              },
+            }),
+          });
 
-const mapStyleToVideoType = (style: VideoStyle): string => {
-    // Map VideoStyle to VideoType enum from Prisma
-    const mapping: Record<VideoStyle, string> = {
-      [VideoStyle.ROTATION_360]: 'ROTATION_360',
-      [VideoStyle.LIFESTYLE_CASUAL]: 'LIFESTYLE',
-      [VideoStyle.LIFESTYLE_PREMIUM]: 'LIFESTYLE',
-      [VideoStyle.AD_TESTIMONIAL]: 'TESTIMONIAL',
-      [VideoStyle.AD_FEATURE_FOCUS]: 'PRODUCT_DEMO',
-      [VideoStyle.AD_PROBLEM_SOLUTION]: 'PRODUCT_DEMO',
-      [VideoStyle.HOW_TO_USE]: 'PRODUCT_DEMO',
-      [VideoStyle.INFLUENCER_SHOWCASE]: 'LIFESTYLE',
-    };
-    return mapping[style] || 'PRODUCT_DEMO';
-  };
+          if (!response.ok) {
+            throw new Error('Failed to create job');
+          }
 
-  const updateJobStatus = (
-    productId: string,
-    style: VideoStyle,
-    status: GenerationJob['status'],
-    progress: number,
-    cost?: number,
-    error?: string
-  ) => {
-    setJobs(prev => prev.map(job => {
-      if (job.productId === productId && job.style === style) {
-        return { ...job, status, progress, cost, error };
-      }
-      return job;
-    }));
-  };
-
-  const pollJobStatus = async (jobId: string, job: GenerationJob) => {
-    let attempts = 0;
-    const maxAttempts = 60;
-
-    while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      try {
-        const response = await fetch(`/api/jobs/${jobId}`);
-        if (!response.ok) throw new Error('Failed to check job status');
-        
-        const data = await response.json();
-        
-        const progressValue = data.progress || 50;
-        updateJobStatus(job.productId, job.style, 'processing', progressValue);
-        
-        if (data.status === 'COMPLETED') {
-          return data;
-        } else if (data.status === 'FAILED') {
-          throw new Error(data.errorMessage || 'Job failed');
+          // Update job status
+          setJobs(prev =>
+            prev.map(j =>
+              j.id === job.id ? { ...j, status: 'queued' } : j
+            )
+          );
         }
-      } catch (error) {
-        console.error('Polling error:', error);
       }
-      
-      attempts++;
+
+      toast.success(`Successfully queued ${newJobs.length} video generation jobs!`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create jobs');
+    } finally {
+      setIsGenerating(false);
     }
-    
-    throw new Error('Job timeout');
   };
-
-  const getStyleIcon = (style: VideoStyle) => {
-    const icons: Record<VideoStyle, string> = {
-      [VideoStyle.ROTATION_360]: '🔄',
-      [VideoStyle.LIFESTYLE_CASUAL]: '🏠',
-      [VideoStyle.LIFESTYLE_PREMIUM]: '💎',
-      [VideoStyle.AD_TESTIMONIAL]: '💬',
-      [VideoStyle.AD_FEATURE_FOCUS]: '🎯',
-      [VideoStyle.AD_PROBLEM_SOLUTION]: '💡',
-      [VideoStyle.HOW_TO_USE]: '📖',
-      [VideoStyle.INFLUENCER_SHOWCASE]: '✨',
-    };
-    return icons[style] || '🎬';
-  };
-
-  const getStyleLabel = (style: VideoStyle) => {
-    return style.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-  };
-
-  const totalVideos = selectedProducts.size * selectedStyles.length;
-  const completedJobs = jobs.filter(j => j.status === 'completed').length;
-  const failedJobs = jobs.filter(j => j.status === 'failed').length;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Bulk Video Generation</h2>
-        <div className="flex items-center gap-4">
-          <Badge variant="secondary" className="text-lg px-4 py-2">
-            <DollarSign className="w-4 h-4 mr-1" />
-            Est. Cost: ${totalCost.toFixed(2)}
-          </Badge>
-          <Badge variant="secondary" className="text-lg px-4 py-2">
-            <Video className="w-4 h-4 mr-1" />
-            {totalVideos} Videos
-          </Badge>
-        </div>
-      </div>
-
       {/* Product Selection */}
       <Card>
         <CardHeader>
-          <CardTitle>Select Products</CardTitle>
-          <div className="flex gap-2 mt-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const flagged = products.filter(p => p.isFlagged).map(p => p.id);
-                setSelectedProducts(new Set(flagged));
-              }}
-            >
-              <Flag className="w-4 h-4 mr-1" />
-              Select Flagged
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const bestSellers = products
-                  .sort((a, b) => b.salesCount - a.salesCount)
-                  .slice(0, 10)
-                  .map(p => p.id);
-                setSelectedProducts(new Set(bestSellers));
-              }}
-            >
-              <TrendingUp className="w-4 h-4 mr-1" />
-              Top 10 Sellers
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                const highTraffic = products
-                  .sort((a, b) => b.viewCount - a.viewCount)
-                  .slice(0, 10)
-                  .map(p => p.id);
-                setSelectedProducts(new Set(highTraffic));
-              }}
-            >
-              <Eye className="w-4 h-4 mr-1" />
-              High Traffic
-            </Button>
-          </div>
+          <CardTitle>Select Products ({selectedProducts.size} selected)</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {products.map(product => (
               <div
                 key={product.id}
-                className={`border rounded-lg p-4 cursor-pointer transition ${
-                  selectedProducts.has(product.id)
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => handleProductSelect(product.id)}
+                className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
+                onClick={() => handleProductToggle(product.id)}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="font-medium text-sm line-clamp-2">{product.title}</h4>
-                  {product.isFlagged && <Flag className="w-4 h-4 text-orange-500" />}
-                </div>
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>{product.salesCount} sales</span>
-                  <span>{product.viewCount} views</span>
-                  <Badge variant="secondary">{product._count.videos} videos</Badge>
-                </div>
-                <div className="mt-2">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full"
-                      style={{ width: `${Math.min(product.priority, 100)}%` }}
-                    />
-                  </div>
+                <Checkbox
+                  checked={selectedProducts.has(product.id)}
+                  onCheckedChange={() => handleProductToggle(product.id)}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{product.title}</p>
                 </div>
               </div>
             ))}
@@ -381,28 +163,28 @@ const mapStyleToVideoType = (style: VideoStyle): string => {
         </CardContent>
       </Card>
 
-      {/* Style Selection */}
+      {/* Video Style Selection */}
       <Card>
         <CardHeader>
-          <CardTitle>Select Video Styles</CardTitle>
+          <CardTitle>Select Video Styles ({selectedStyles.length} selected)</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.values(VideoStyle).map(style => (
-              <button
-                key={style}
-                onClick={() => handleStyleToggle(style)}
-                className={`p-4 rounded-lg border-2 transition ${
-                  selectedStyles.includes(style)
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {videoStyles.map(style => (
+              <div
+                key={style.value}
+                className="flex items-start gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50"
+                onClick={() => handleStyleToggle(style.value)}
               >
-                <div className="text-2xl mb-2">{getStyleIcon(style)}</div>
-                <div className="text-sm font-medium">
-                  {getStyleLabel(style)}
+                <Checkbox
+                  checked={selectedStyles.includes(style.value)}
+                  onCheckedChange={() => handleStyleToggle(style.value)}
+                />
+                <div className="flex-1">
+                  <p className="font-medium">{style.label}</p>
+                  <p className="text-sm text-gray-600">{style.description}</p>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </CardContent>
@@ -414,111 +196,98 @@ const mapStyleToVideoType = (style: VideoStyle): string => {
           <CardTitle>Select Budget Level</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            {Object.values(BudgetLevel).map(level => (
-              <button
-                key={level}
-                onClick={() => setBudget(level)}
-                className={`p-4 rounded-lg border-2 transition ${
-                  budget === level
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-200 hover:border-gray-300'
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {budgetOptions.map(option => (
+              <div
+                key={option.value}
+                className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                  budget === option.value
+                    ? 'border-purple-600 bg-purple-50'
+                    : 'border-gray-200 hover:border-purple-300'
                 }`}
+                onClick={() => setBudget(option.value)}
               >
-                <div className="font-medium mb-1 capitalize">{level}</div>
-                <div className="text-xs text-gray-500">
-                  {level === BudgetLevel.ECONOMY && '$0.01-0.05/video'}
-                  {level === BudgetLevel.STANDARD && '$0.05-0.15/video'}
-                  {level === BudgetLevel.PREMIUM && '$0.15-0.50/video'}
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{option.label}</span>
+                  <Badge variant={budget === option.value ? 'default' : 'outline'}>
+                    {option.cost}
+                  </Badge>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Generation Progress */}
+      {/* Summary & Generate */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Summary</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-sm text-gray-600">Products</p>
+              <p className="text-2xl font-bold">{selectedProducts.size}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Styles</p>
+              <p className="text-2xl font-bold">{selectedStyles.length}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Total Videos</p>
+              <p className="text-2xl font-bold">
+                {selectedProducts.size * selectedStyles.length}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Estimated Cost</p>
+              <p className="text-2xl font-bold">${totalCost.toFixed(2)}</p>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleGenerate}
+            disabled={isGenerating || selectedProducts.size === 0 || selectedStyles.length === 0}
+            className="w-full"
+            size="lg"
+          >
+            {isGenerating ? 'Generating...' : 'Generate Videos'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Jobs List */}
       {jobs.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Generation Progress</CardTitle>
-            <div className="flex items-center gap-4 mt-2">
-              <Badge variant="success">
-                <CheckCircle className="w-4 h-4 mr-1" />
-                {completedJobs} Completed
-              </Badge>
-              {failedJobs > 0 && (
-                <Badge variant="destructive">
-                  <AlertCircle className="w-4 h-4 mr-1" />
-                  {failedJobs} Failed
-                </Badge>
-              )}
-            </div>
+            <CardTitle>Generation Jobs</CardTitle>
           </CardHeader>
           <CardContent>
-            <Progress value={(completedJobs / jobs.length) * 100} className="mb-4" />
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {jobs.map((job, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                >
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">{job.productTitle}</div>
-                    <div className="text-xs text-gray-500">{getStyleLabel(job.style)}</div>
+            <div className="space-y-2">
+              {jobs.map(job => (
+                <div key={job.id} className="flex items-center justify-between p-3 border rounded">
+                  <div>
+                    <p className="font-medium">{job.productTitle}</p>
+                    <p className="text-sm text-gray-600">{job.style}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {job.status === 'processing' && (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-                    )}
-                    {job.status === 'completed' && (
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    )}
-                    {job.status === 'failed' && (
-                      <AlertCircle className="w-4 h-4 text-red-600" />
-                    )}
-                    {job.cost && (
-                      <span className="text-xs font-medium">${job.cost.toFixed(3)}</span>
-                    )}
-                  </div>
+                  <Badge
+                    variant={
+                      job.status === 'completed'
+                        ? 'default'
+                        : job.status === 'failed'
+                        ? 'destructive'
+                        : 'outline'
+                    }
+                  >
+                    {job.status}
+                  </Badge>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       )}
-
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-4">
-        <Button
-          variant="outline"
-          onClick={() => {
-            setSelectedProducts(new Set());
-            setSelectedStyles([]);
-            setJobs([]);
-          }}
-          disabled={isGenerating}
-        >
-          Clear Selection
-        </Button>
-        <Button
-          onClick={startBulkGeneration}
-          disabled={isGenerating || selectedProducts.size === 0 || selectedStyles.length === 0}
-          className="gradient-brand"
-        >
-          {isGenerating ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Generating...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate {totalVideos} Videos
-            </>
-          )}
-        </Button>
-      </div>
     </div>
   );
 }
