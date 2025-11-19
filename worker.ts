@@ -72,8 +72,6 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
       productDescription: settings.productDescription || '',
     });
 
-   // Around line 75-95, update the video creation:
-
     console.log('✅ Video generated:', result.videoUrl);
 
     // Create video record
@@ -83,7 +81,7 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
         productId,
         jobId,
         videoType: VideoType.PRODUCT_DEMO,
-        fileUrl: result.videoUrl, // Use fileUrl instead of url or videoUrl
+        fileUrl: result.videoUrl,
         metadata: settings as any,
       },
     });
@@ -94,8 +92,8 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
       data: {
         status: JobStatus.COMPLETED,
         completedAt: new Date(),
-        resultUrl: result.videoUrl, // Store URL in job too
-        costCredits: Math.round(result.estimatedCost * 100), // Convert dollars to credits (cents)
+        resultUrl: result.videoUrl,
+        costCredits: Math.round(result.estimatedCost * 100),
       },
     });
 
@@ -110,7 +108,7 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
         where: { id: jobId },
         data: {
           status: JobStatus.FAILED,
-          error: error.message,
+          errorMessage: error.message,
           completedAt: new Date(),
         },
       });
@@ -142,10 +140,10 @@ async function startWorker() {
     },
     {
       connection,
-      concurrency: 3, // Process up to 3 jobs concurrently
+      concurrency: 3,
       limiter: {
-        max: 10, // Max 10 jobs
-        duration: 60000, // per 60 seconds
+        max: 10,
+        duration: 60000,
       },
     }
   );
