@@ -1,24 +1,32 @@
-import { createWorker } from './lib/queue';
-import { AIProvider, JobStatus, VideoType } from '@prisma/client';
-import { LumaProvider } from './lib/ai-providers/luma';
-import { RunwayProvider } from './lib/ai-providers/runway';
-import { PikaProvider } from './lib/ai-providers/pika';
+import { Worker, Job } from 'bullmq';
+import prisma from './lib/prisma';
+import redis, { getRedisConnection } from './lib/redis';
+import { ReplicateProvider } from './lib/ai-providers/replicate';
+import { JobStatus, AIProvider, VideoType } from '@prisma/client';
 
-
-// Job data types
-interface VideoGenerationJobData {
+interface VideoJobData {
   jobId: string;
   productId: string;
   projectId: string;
-  settings: any;
+  settings: {
+    style: string;
+    budget: string;
+    productTitle: string;
+    productDescription: string;
+    prompt?: string;
+  };
 }
 
-async function processVideoGeneration(data: VideoGenerationJobData) {
-  const { jobId, productId, projectId, settings } = data;
+// Process video generation job
+async function processVideoGeneration(job: Job<VideoJobData>) {
+  const { jobId, productId, projectId, settings } = job.data;
+
+  console.log(`🔄 Processing job ${job.id}: generate-video`);
+  console.log('📦 Job data:', { jobId, productId, projectId });
 
   try {
-    // Get job details
-    const job = await prisma.videoJob.findUnique({
+    // Get job from database
+    const videoJob = await prisma.videoJob.findUnique({
       where: { id: jobId },
       include: {
         product: true,
@@ -26,148 +34,124 @@ async function processVideoGeneration(data: VideoGenerationJobData) {
       },
     });
 
-    if (!job) {
+    if (!videoJob) {
       throw new Error('Job not found');
-    }
-
-    // Validate product has images
-    const productImages = job.product.images as string[] | null;
-    if (!productImages || productImages.length === 0) {
-      throw new Error('Product has no images');
     }
 
     // Update status to processing
     await prisma.videoJob.update({
       where: { id: jobId },
-      data: {
+      data: { 
         status: JobStatus.PROCESSING,
-        progress: 10,
+        startedAt: new Date(),
       },
     });
 
-    // Select AI provider
-    let provider;
-    switch (job.provider) {
-      case AIProvider.LUMA:
-        if (!job.project.lumaKey) {
-          throw new Error('Luma API key not configured');
-        }
-        provider = new LumaProvider({ apiKey: job.project.lumaKey });
-        break;
-      case AIProvider.RUNWAY:
-        if (!job.project.runwayKey) {
-          throw new Error('Runway API key not configured');
-        }
-        provider = new RunwayProvider({ apiKey: job.project.runwayKey });
-        break;
-      case AIProvider.PIKA:
-        if (!job.project.pikaKey) {
-          throw new Error('Pika API key not configured');
-        }
-        provider = new PikaProvider({ apiKey: job.project.pikaKey });
-        break;
-      case AIProvider.REPLICATE:
-        if (!job.project.replicateKey) {
-          throw new Error('Replicate API key not configured');
-        }
-        provider = new ReplicateProvider({ apiKey: job.project.replicateKey });
-        break;
-      default:
-        throw new Error(`Unsupported provider: ${job.provider}`);
+    // Get product images
+    const images = videoJob.product.images as string[];
+    if (!images || images.length === 0) {
+      throw new Error('Product has no images');
     }
 
+    // Get API key from project
+    const apiKey = videoJob.project.replicateKey;
+    if (!apiKey) {
+      throw new Error('Replicate API key not configured');
+    }
+
+    // Initialize provider
+    const provider = new ReplicateProvider({ apiKey });
+
     // Generate video
-    await prisma.videoJob.update({
-      where: { id: jobId },
-      data: { progress: 30 },
+    console.log('🎬 Starting video generation...');
+    const result = await provider.generateVideo({
+      imageUrl: images[0],
+      style: settings.style as any,
+      budget: settings.budget as any,
+      productTitle: settings.productTitle,
+      productDescription: settings.productDescription || '',
     });
 
-    const videoResult = await provider.generateVideo({
-      prompt: job.prompt || settings.prompt || `Generate a product video for ${job.product.title}`,
-      imageUrl: productImages[0],
-      duration: settings.duration || 5,
-      aspectRatio: settings.aspectRatio || '9:16',
-      style: settings.style || '360_rotation',
-      budget: settings.budget || 'standard',
-      productTitle: job.product.title,
-      productDescription: job.product.description || '',
-    });
+    console.log('✅ Video generated:', result.videoUrl);
 
-    // Update progress
-    await prisma.videoJob.update({
-      where: { id: jobId },
-      data: { progress: 80 },
-    });
-
-// Create video record
-    const videoUrl = typeof videoResult === 'string' 
-      ? videoResult 
-      : (videoResult as any).videoUrl || (videoResult as any).url || '';
-    
+    // Create video record
     const video = await prisma.video.create({
       data: {
         projectId,
         productId,
-        videoType: job.jobType,
-        fileUrl: videoUrl,
-        metadata: {
-          provider: job.provider,
-          settings,
-          productTitle: job.product.title,
-          thumbnailUrl: productImages[0],
-          duration: settings.duration || 5,
-          aspectRatio: settings.aspectRatio || '9:16',
-          estimatedCost: typeof videoResult === 'object' ? (videoResult as any).estimatedCost : undefined,
-          status: 'COMPLETED',
-        },
+        jobId,
+        provider: AIProvider.REPLICATE,
+        videoType: VideoType.AI_GENERATED,
+        videoUrl: result.videoUrl,
+        settings: settings as any,
+        cost: result.estimatedCost,
       },
     });
 
-// Mark job as completed
+    // Update job status to completed
     await prisma.videoJob.update({
       where: { id: jobId },
       data: {
         status: JobStatus.COMPLETED,
-        progress: 100,
         completedAt: new Date(),
+        videoId: video.id,
+        cost: result.estimatedCost,
       },
     });
 
     console.log(`✅ Job ${jobId} completed successfully`);
+    return { success: true, videoId: video.id };
   } catch (error: any) {
-    console.error(`❌ Job ${jobId} failed:`, error);
+    console.error(`❌ Job ${jobId} failed:`, error.message);
 
-    await prisma.videoJob.update({
-      where: { id: jobId },
-      data: {
-        status: JobStatus.FAILED,
-        errorMessage: error.message,
-        completedAt: new Date(),
-      },
-    });
+    // Update job status to failed
+    try {
+      await prisma.videoJob.update({
+        where: { id: jobId },
+        data: {
+          status: JobStatus.FAILED,
+          error: error.message,
+          completedAt: new Date(),
+        },
+      });
+    } catch (updateError) {
+      console.error('Failed to update job status:', updateError);
+    }
 
     throw error;
   }
 }
 
 // Create worker
-const worker = createWorker(async (job) => {
-  console.log(`🔄 Processing job ${job.id}:`, job.name);
-
-  switch (job.name) {
-    case 'generate-video':
-      await processVideoGeneration(job.data as VideoGenerationJobData);
-      break;
-    default:
-      console.warn(`Unknown job type: ${job.name}`);
+async function startWorker() {
+  if (!redis) {
+    console.error('❌ Redis is not available. Worker cannot start.');
+    process.exit(1);
   }
-});
 
-if (worker) {
-  console.log('🚀 Worker started and listening for jobs...');
+  const connection = getRedisConnection();
+  if (!connection) {
+    console.error('❌ Redis connection details not available. Worker cannot start.');
+    process.exit(1);
+  }
+
+  const worker = new Worker(
+    'video-generation',
+    async (job: Job<VideoJobData>) => {
+      return await processVideoGeneration(job);
+    },
+    {
+      connection,
+      concurrency: 3, // Process up to 3 jobs concurrently
+      limiter: {
+        max: 10, // Max 10 jobs
+        duration: 60000, // per 60 seconds
+      },
+    }
+  );
 
   worker.on('completed', (job) => {
-    console.log(`✅ Job ${job.id} completed`);
+    console.log(`✅ Job ${job.id} completed successfully`);
   });
 
   worker.on('failed', (job, err) => {
@@ -175,20 +159,27 @@ if (worker) {
   });
 
   worker.on('error', (err) => {
-    console.error('Worker error:', err);
+    console.error('❌ Worker error:', err);
   });
-} else {
-  console.warn('⚠️ Worker not started - Redis not available');
+
+  console.log('🚀 Worker started and listening for jobs...');
+
+  // Graceful shutdown
+  process.on('SIGTERM', async () => {
+    console.log('⏹️ Shutting down worker...');
+    await worker.close();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', async () => {
+    console.log('⏹️ Shutting down worker...');
+    await worker.close();
+    process.exit(0);
+  });
 }
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('🛑 Shutting down worker...');
-  if (worker) {
-    await worker.close();
-  }
-  if (redis) {
-    await redis.quit();
-  }
-  process.exit(0);
+// Start the worker
+startWorker().catch((error) => {
+  console.error('Failed to start worker:', error);
+  process.exit(1);
 });
