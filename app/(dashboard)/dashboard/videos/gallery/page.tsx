@@ -12,48 +12,51 @@ async function getDefaultProject(userId: string) {
   return project;
 }
 
+async function getVideos(projectId: string) {
+  const videos = await prisma.video.findMany({
+    where: { projectId },
+    include: {
+      product: {
+        select: {
+          title: true,
+          images: true,
+        },
+      },
+      job: {
+        select: {
+          provider: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  });
+  return videos;
+}
+
 export default async function VideoGalleryPage() {
   const user = await requireAuth();
-  
   const defaultProject = await getDefaultProject(user.id);
 
   if (!defaultProject) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">Please create a project first.</p>
+        <h2 className="text-2xl font-bold text-gray-900">No Project Found</h2>
+        <p className="text-gray-600 mt-2">Please create a project first.</p>
       </div>
     );
   }
 
-  const videos = await prisma.video.findMany({
-    where: {
-      projectId: defaultProject.id,
-    },
-    include: {
-      product: {
-        select: {
-          title: true,
-          price: true,
-          shopifyId: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-    take: 50,
-  });
+  const videos = await getVideos(defaultProject.id);
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Video Gallery</h1>
-          <p className="text-gray-600 mt-2">Browse and manage your AI-generated videos</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Video Gallery</h1>
+        <p className="text-gray-600 mt-2">View and manage your generated videos</p>
       </div>
 
-      <VideoGallery projectId={defaultProject.id} initialVideos={videos} />
+      <VideoGallery projectId={defaultProject.id} videos={videos} />
     </div>
   );
 }
