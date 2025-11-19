@@ -1,36 +1,26 @@
-export interface AIProviderConfig {
-  apiKey: string;
-  baseUrl?: string;
-}
+export type VideoStyle = 
+  | '360_rotation'
+  | 'lifestyle_casual'
+  | 'lifestyle_premium'
+  | 'ad_testimonial'
+  | 'ad_feature_focus'
+  | 'ad_problem_solution'
+  | 'how_to_use'
+  | 'influencer_showcase';
+
+export type BudgetLevel = 'economy' | 'standard' | 'premium';
 
 export interface VideoGenerationRequest {
   imageUrl: string;
   prompt?: string;
-  duration?: number; // in seconds
-  aspectRatio?: '16:9' | '9:16' | '1:1';
-  quality?: 'low' | 'medium' | 'high';
-  style?: string;
+  duration?: number;
 }
 
 export interface VideoGenerationResponse {
-  jobId: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  progress?: number;
-  resultUrl?: string;
-  error?: string;
-  estimatedTime?: number;
-  metadata?: {  // ADD THIS
-    model?: string;
-    cost?: number;
-    prompt?: string;
-    [key: string]: any;
-  };
+  videoUrl: string;
+  estimatedCost: number;
 }
 
 export interface AIProvider {
   generateVideo(request: VideoGenerationRequest): Promise<VideoGenerationResponse>;
-  checkStatus(jobId: string): Promise<VideoGenerationResponse>;
-  downloadVideo(jobId: string): Promise<Buffer>;
-  getCredits(): Promise<number>;
-  validateApiKey(): Promise<boolean>;
 }
