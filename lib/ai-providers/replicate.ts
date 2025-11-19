@@ -1,7 +1,7 @@
 import Replicate from 'replicate';
 import { AIProvider, VideoGenerationRequest, VideoGenerationResponse, VideoStyle, BudgetLevel } from './types';
 
-type AIModel = 'sora-2' | 'veo-3.1';
+type AIModel = 'sora-2' | 'veo-3.1' | 'kling-1.5';
 
 export class ReplicateProvider implements AIProvider {
   private client: Replicate;
@@ -14,31 +14,21 @@ export class ReplicateProvider implements AIProvider {
     });
   }
 
-  private selectModel(budget: BudgetLevel, preferredModel?: AIModel): { model: string; type: AIModel } {
-    // If no preference, use Veo for economy/standard, Sora for premium
-    if (!preferredModel) {
-      const defaultMap: Record<BudgetLevel, { model: string; type: AIModel }> = {
-        economy: { model: 'google/veo-3.1', type: 'veo-3.1' },
-        standard: { model: 'google/veo-3.1', type: 'veo-3.1' },
-        premium: { model: 'openai/sora-2', type: 'sora-2' },
-      };
-      return defaultMap[budget];
-    }
-
-    // Allow both models for all tiers
+  private selectModel(preferredModel?: AIModel): { model: string; type: AIModel } {
     const models: Record<AIModel, string> = {
+      'kling-1.5': 'fofr/kling-video:e6f6050f3a2e62b8de467530ea48c9623cc6d0a2dd4194a3b75d8ae6c50f3c9e',
       'veo-3.1': 'google/veo-3.1',
       'sora-2': 'openai/sora-2',
     };
 
-    return { model: models[preferredModel], type: preferredModel };
+    const modelType = preferredModel || 'kling-1.5';
+    return { model: models[modelType], type: modelType };
   }
 
   private generatePrompt(
     style: VideoStyle,
     productTitle: string,
-    productDescription: string,
-    budget: BudgetLevel
+    productDescription: string
   ): string {
     const prompts: Record<VideoStyle, string> = {
       '360_rotation': `Professional 360 degree smooth rotation of ${productTitle}. Clean white studio background, seamless continuous rotation showing all angles, premium product photography style, studio lighting, commercial video quality. The product rotates smoothly from front to back showing every detail.`,
@@ -84,12 +74,11 @@ export class ReplicateProvider implements AIProvider {
     preferredModel?: AIModel;
   }): Promise<VideoGenerationResponse> {
     try {
-      const { model, type } = this.selectModel(request.budget, request.preferredModel);
+      const { model, type } = this.selectModel(request.preferredModel);
       const prompt = this.generatePrompt(
         request.style,
         request.productTitle,
-        request.productDescription,
-        request.budget
+        request.productDescription
       );
       const aspectRatio = this.getAspectRatio(request.style);
 
@@ -98,12 +87,21 @@ export class ReplicateProvider implements AIProvider {
       console.log('🖼️ Image URL:', request.imageUrl);
       console.log('📝 Prompt:', prompt);
       console.log('🎨 Style:', request.style);
-      console.log('💰 Budget:', request.budget);
       console.log('📐 Aspect Ratio:', aspectRatio);
 
       let output;
 
-      if (type === 'veo-3.1') {
+      if (type === 'kling-1.5') {
+        // Kling uses different parameters
+        output = await this.client.run(model as any, {
+          input: {
+            prompt: prompt,
+            image_url: request.imageUrl,
+            duration: "5", // 5 seconds
+            aspect_ratio: aspectRatio === 'portrait' ? '9:16' : aspectRatio === 'square' ? '1:1' : '16:9',
+          },
+        });
+      } else if (type === 'veo-3.1') {
         // Veo 3.1 uses reference_images
         output = await this.client.run(model as any, {
           input: {
@@ -122,8 +120,6 @@ export class ReplicateProvider implements AIProvider {
         });
       }
 
-     // Around line 120-140, replace the video URL extraction section with:
-
       console.log('✅ Video generated successfully');
       console.log('📹 Output:', output);
 
@@ -139,7 +135,7 @@ export class ReplicateProvider implements AIProvider {
         } else if (Array.isArray(output) && output.length > 0) {
           videoUrl = output[0];
         } else {
-          videoUrl = JSON.stringify(output);
+          throw new Error('Unable to extract video URL from output');
         }
       } else {
         throw new Error('Unable to extract video URL from output');
@@ -147,7 +143,7 @@ export class ReplicateProvider implements AIProvider {
 
       return {
         videoUrl: videoUrl,
-        estimatedCost: this.calculateCost(request.budget, type),
+        estimatedCost: this.calculateCost(type),
       };
     } catch (error: any) {
       console.error('❌ Video generation failed:', error);
@@ -155,21 +151,13 @@ export class ReplicateProvider implements AIProvider {
     }
   }
 
-  private calculateCost(budget: BudgetLevel, model: AIModel): number {
-    // Pricing for both models at all tiers
-    const costs: Record<AIModel, Record<BudgetLevel, number>> = {
-      'veo-3.1': {
-        economy: 1.00,    // Veo economy
-        standard: 2.50,   // Veo standard
-        premium: 5.00,    // Veo premium
-      },
-      'sora-2': {
-        economy: 3.00,    // Sora economy
-        standard: 6.00,   // Sora standard
-        premium: 12.00,   // Sora premium
-      },
+  private calculateCost(model: AIModel): number {
+    const costs: Record<AIModel, number> = {
+      'kling-1.5': 0.25,
+      'veo-3.1': 2.50,
+      'sora-2': 6.00,
     };
 
-    return costs[model][budget];
+    return costs[model];
   }
 }
