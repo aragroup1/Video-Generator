@@ -1,11 +1,9 @@
 import { createWorker } from './lib/queue';
-import redis from './lib/redis';
-import prisma from './lib/prisma';
 import { AIProvider, JobStatus, VideoType } from '@prisma/client';
 import { LumaProvider } from './lib/ai-providers/luma';
 import { RunwayProvider } from './lib/ai-providers/runway';
 import { PikaProvider } from './lib/ai-providers/pika';
-import { ReplicateProvider } from './lib/ai-providers/replicate';
+
 
 // Job data types
 interface VideoGenerationJobData {
