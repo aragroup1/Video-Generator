@@ -53,3 +53,8 @@
     "typescript": "^5"
   }
 }
+{
+  "dependencies": {
+    "fluent-ffmpeg": "^2.1.2"
+  }
+}
