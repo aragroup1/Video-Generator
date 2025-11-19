@@ -72,6 +72,8 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
       productDescription: settings.productDescription || '',
     });
 
+   // Around line 75-95, update the video creation:
+
     console.log('✅ Video generated:', result.videoUrl);
 
     // Create video record
@@ -81,9 +83,8 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
         productId,
         jobId,
         videoType: VideoType.PRODUCT_DEMO,
-        url: result.videoUrl, // Changed from videoUrl to url
-        settings: settings as any,
-        cost: result.estimatedCost,
+        fileUrl: result.videoUrl, // Use fileUrl instead of url or videoUrl
+        metadata: settings as any,
       },
     });
 
@@ -93,8 +94,8 @@ async function processVideoGeneration(job: Job<VideoJobData>) {
       data: {
         status: JobStatus.COMPLETED,
         completedAt: new Date(),
-        videoId: video.id,
-        cost: result.estimatedCost,
+        resultUrl: result.videoUrl, // Store URL in job too
+        costCredits: Math.round(result.estimatedCost * 100), // Convert dollars to credits (cents)
       },
     });
 
