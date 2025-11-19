@@ -122,17 +122,27 @@ export class ReplicateProvider implements AIProvider {
         });
       }
 
+     // Around line 120-140, replace the video URL extraction section with:
+
       console.log('✅ Video generated successfully');
       console.log('📹 Output:', output);
 
       // Extract video URL from output
       let videoUrl: string;
-      if (typeof output === 'object' && output !== null && 'url' in output) {
-        videoUrl = (output as any).url();
-      } else if (Array.isArray(output)) {
-        videoUrl = output[0];
+      if (typeof output === 'string') {
+        videoUrl = output;
+      } else if (typeof output === 'object' && output !== null) {
+        if ('url' in output && typeof (output as any).url === 'function') {
+          videoUrl = (output as any).url();
+        } else if ('url' in output && typeof (output as any).url === 'string') {
+          videoUrl = (output as any).url;
+        } else if (Array.isArray(output) && output.length > 0) {
+          videoUrl = output[0];
+        } else {
+          videoUrl = JSON.stringify(output);
+        }
       } else {
-        videoUrl = output as string;
+        throw new Error('Unable to extract video URL from output');
       }
 
       return {
