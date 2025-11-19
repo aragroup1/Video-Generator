@@ -14,16 +14,24 @@ export class ReplicateProvider implements AIProvider {
     });
   }
 
-  private selectModel(budget: BudgetLevel): { model: string; type: AIModel } {
-    // Use Veo 3.1 for economy/standard (cheaper, still high quality)
-    // Use Sora 2 for premium (most expensive, best quality)
-    const modelMap: Record<BudgetLevel, { model: string; type: AIModel }> = {
-      economy: { model: 'google/veo-3.1', type: 'veo-3.1' },
-      standard: { model: 'google/veo-3.1', type: 'veo-3.1' },
-      premium: { model: 'openai/sora-2', type: 'sora-2' },
+  private selectModel(budget: BudgetLevel, preferredModel?: AIModel): { model: string; type: AIModel } {
+    // If no preference, use Veo for economy/standard, Sora for premium
+    if (!preferredModel) {
+      const defaultMap: Record<BudgetLevel, { model: string; type: AIModel }> = {
+        economy: { model: 'google/veo-3.1', type: 'veo-3.1' },
+        standard: { model: 'google/veo-3.1', type: 'veo-3.1' },
+        premium: { model: 'openai/sora-2', type: 'sora-2' },
+      };
+      return defaultMap[budget];
+    }
+
+    // Allow both models for all tiers
+    const models: Record<AIModel, string> = {
+      'veo-3.1': 'google/veo-3.1',
+      'sora-2': 'openai/sora-2',
     };
 
-    return modelMap[budget];
+    return { model: models[preferredModel], type: preferredModel };
   }
 
   private generatePrompt(
@@ -73,9 +81,10 @@ export class ReplicateProvider implements AIProvider {
     budget: BudgetLevel;
     productTitle: string;
     productDescription: string;
+    preferredModel?: AIModel;
   }): Promise<VideoGenerationResponse> {
     try {
-      const { model, type } = this.selectModel(request.budget);
+      const { model, type } = this.selectModel(request.budget, request.preferredModel);
       const prompt = this.generatePrompt(
         request.style,
         request.productTitle,
@@ -137,17 +146,17 @@ export class ReplicateProvider implements AIProvider {
   }
 
   private calculateCost(budget: BudgetLevel, model: AIModel): number {
-    // Pricing based on model and budget
+    // Pricing for both models at all tiers
     const costs: Record<AIModel, Record<BudgetLevel, number>> = {
       'veo-3.1': {
-        economy: 1.50,   // Google Veo is cheaper
-        standard: 3.00,
-        premium: 5.00,
+        economy: 1.00,    // Veo economy
+        standard: 2.50,   // Veo standard
+        premium: 5.00,    // Veo premium
       },
       'sora-2': {
-        economy: 3.00,   // Sora 2 is more expensive
-        standard: 6.00,
-        premium: 10.00,
+        economy: 3.00,    // Sora economy
+        standard: 6.00,   // Sora standard
+        premium: 12.00,   // Sora premium
       },
     };
 
